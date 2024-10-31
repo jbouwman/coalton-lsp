@@ -1,6 +1,20 @@
 ;;;; Behavior common to classes that manage processes
 
-(in-package :coalton-lsp)
+(defpackage #:coalton-lsp.lib.process
+  (:use #:cl
+        #:coalton-lsp.lib.log)
+  (:export #:process
+           #:worker
+           #:worker-function
+           #:start
+           #:run
+           #:stop
+           #:name
+           #:lock
+           #:enqueue
+           #:with-lock-held))
+
+(in-package #:coalton-lsp.lib.process)
 
 (defgeneric start (process)
   (:documentation "Start a process. The started process is returned."))
@@ -48,7 +62,7 @@
 (defvar *worker-debug* nil)
 
 (defclass worker (process)
-  ((fn)
+  ((fn :accessor worker-function)
    (run :initform t
         :reader run-p)
    (queue :initform nil)))

@@ -1,4 +1,11 @@
-(in-package #:coalton-lsp)
+(defpackage #:coalton-lsp.lib.json
+  (:use #:cl
+        #:coalton-lsp.lib.message)
+  (:export #:decode-json
+           #:reencode-json
+           #:to-json))
+
+(in-package #:coalton-lsp.lib.json)
 
 ;;; Decoding JSON strings
 

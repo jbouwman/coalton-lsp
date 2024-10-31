@@ -12,7 +12,7 @@ def test [] {
           --non-interactive
           --eval "(asdf:load-system :coalton-lsp/tests)"
 	  --eval "(fiasco:run-package-tests
-                    :packages '(:coalton-lsp/tests)
+                    :packages '(:coalton-lsp.tests)
                     :interactive nil)")
 }
 

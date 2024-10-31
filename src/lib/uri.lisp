@@ -1,13 +1,12 @@
 ;;;; Just enough to parse simple file: scheme URLs
 
-(defpackage #:lib.uri
-  (:use
-   #:cl)
-  (:export
-   #:parse
-   #:input-stream))
+(defpackage #:coalton-lsp.lib.uri
+  (:use #:cl)
+  (:export #:parse
+           #:uri-path
+           #:input-stream))
 
-(in-package #:lib.uri)
+(in-package #:coalton-lsp.lib.uri)
 
 (defstruct uri
   scheme

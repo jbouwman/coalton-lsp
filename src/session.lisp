@@ -84,66 +84,6 @@
     (let ((uri (cdr (assoc "uri" document :test #'string=))))
       (submit-event session 'document-changed uri))))
 
-(defclass uri-source ()
-  ((uri :initarg :uri)))
-
-(defmethod coalton-impl/source:source-stream ((self uri-source))
-  (lib.uri:input-stream (slot-value self 'uri)))
-
-(defmethod coalton-impl/source:source-available-p ((self uri-source))
-  t)
-
-(defmethod coalton-impl/source:source-name ((self uri-source))
-  (lib.uri::uri-path (slot-value self 'uri)))
-
-(defun export-condition (condition)
-  "Extract text and position fields from a Coalton source condition."
-  (with-open-stream (source-stream (coalton-impl/source::condition-stream condition))
-    (let ((state (coalton-impl/source::make-printer-state source-stream condition)))
-      (mapcar (lambda (note)
-                (list (coalton-impl/source:message condition)
-                      (coalton-impl/source:message note)
-                      (coalton-impl/source::offset-position state
-                                                            (coalton-impl/source::start-offset note))
-                      (coalton-impl/source::offset-position state
-                                                            (coalton-impl/source::end-offset note))))
-              (coalton-impl/source::notes condition)))))
-
-(defun make-diagnostic (s1 e1 s2 e2 message code)
-  (let ((diagnostic (make-message 'diagnostic)))
-    (set-field diagnostic (list :range :start :line) (1- s1))
-    (set-field diagnostic (list :range :start :character) e1)
-    (set-field diagnostic (list :range :end :line) (1- s2))
-    (set-field diagnostic (list :range :end :character) e2)
-    (set-field diagnostic (list :message) message)
-    (set-field diagnostic (list :code) code)
-    (set-field diagnostic (list :severity) :warning)
-    (set-field diagnostic (list :source) "coalton")
-    diagnostic))
-
-(defun make-diagnostics (c)
-  (mapcar (lambda (e)
-            (let ((coalton-impl/settings:*coalton-print-unicode* nil))
-              (destructuring-bind (note message start end) e
-                (message-value
-                 (make-diagnostic (car start) (cdr start)
-                                  (car end) (cdr end)
-                                  (format nil "~a - ~a" note message)
-                                  1)))))
-          (export-condition c)))
-
-(defun compile-uri (ur-uri)
-  (let ((uri (lib.uri:parse ur-uri)))
-    (when uri
-      (let* ((filename (lib.uri::uri-path uri))
-             (source (coalton-impl/source:make-source-file filename)))
-        (handler-case
-            (progn
-              (coalton-impl/entry:compile source :load nil)
-              nil)
-          (coalton-impl/source::source-condition (c)
-            (make-diagnostics c)))))))
-
 (defun update-diagnostics (session uri)
   (let ((message (make-message 'text-document-publish-diagnostics-params)))
     (set-field message :uri uri)
@@ -159,6 +99,11 @@
 (define-condition session-exit ()
   ())
 
+(defun message-type (rpc-message)
+  (if (rpc-message-field rpc-message :id)
+      'request-message
+      'notification-message))
+
 (defun make-request (rpc-message)
   (make-message (message-type rpc-message)
                 (parsed-content rpc-message)))
@@ -169,7 +114,7 @@
 ;;; work. The only other thing needed is the associated request id.
 
 (defun make-response (id result)
-  (let ((class (copy-message (get-message-class 'response-message))))
+  (let ((class (copy-message (find-message-class 'response-message))))
     (set-field-class class :result (message-class result))
     (let ((response (make-instance 'message :class class)))
       (set-field response :jsonrpc "2.0")
@@ -186,7 +131,7 @@
     response))
 
 (defun make-notification (method params)
-  (let ((class (copy-message (get-message-class 'notification-message))))
+  (let ((class (copy-message (find-message-class 'notification-message))))
     (set-field-class class :params (message-class params))
     (let ((notification (make-instance 'message :class class)))
       (set-field notification :jsonrpc "2.0")
@@ -222,43 +167,53 @@
   (let ((rpc-version (get-field request :jsonrpc))
         (method (get-field request :method)))
     (cond ((not (string-equal rpc-version "2.0"))
-           (invalid-request "Bad rpc version ~a" rpc-version))
+           (invalid-request "bad rpc version: ~a" rpc-version))
           ((not method)
-           (invalid-request "Missing method")))
+           (invalid-request "missing method")))
     method))
 
-(defvar *message-handlers*
+(defvar *messages*
   (make-hash-table :test 'equal))
 
 (defstruct message-handler
   params
-  fn)
+  function)
 
 (defun get-message-handler (method)
-  (let ((handler (gethash method *message-handlers*)))
+  (let ((handler (gethash method *messages*)))
     (unless handler
-      (method-not-found "Unsupported method '~a'" method))
+      (method-not-found "unsupported method: ~a" method))
     handler))
 
-(defmacro define-handler (method params fn)
-  `(setf (gethash ,method *message-handlers*)
-         (make-message-handler :params ',params
-                               :fn ',fn)))
+(defun %define-message-handler (&key method params function)
+  (unless (fboundp function)
+    (warn "message handler function is undefined: ~a" function))
+  (unless (message-class-p params)
+    (warn "message parameter class is undefined: ~a" params))
+  (setf (gethash method *messages*)
+        (make-message-handler :params params
+                              :function function)))
+
+(defmacro define-handler (method params function)
+  `(%define-message-handler :method ,method
+                            :params ',params
+                            :function ',function))
 
 (defun request-params (request)
   "Return REQUEST's params message."
   (let* ((method (request-method request))
-         (params-message-class (message-handler-params (gethash method *message-handlers*))))
-    (when params-message-class
-      (make-message params-message-class (get-field request :params)))))
+         (params-class (message-handler-params (gethash method *messages*))))
+    (when params-class
+      (make-message params-class (get-field request :params)))))
 
 (defun process-notification (session request)
   (handler-case
       (let* ((handler (get-message-handler (request-method request)))
              (params (request-params request)))
-        (funcall (message-handler-fn handler) session params))
+        (funcall (message-handler-function handler) session params))
     (lsp-error ()
-      ;; logged when thrown
+      ;; A message was logged when the error was signaled, and
+      ;; there's nothing to return to the client. No-op.
       )))
 
 (defun process-request (session request)
@@ -266,8 +221,8 @@
       (let* ((method (request-method request))
              (handler (get-message-handler method))
              (params (request-params request))
-             (result (funcall (message-handler-fn handler) session params)))
-        (/debug "processing request: '~a'" method)
+             (result (funcall (message-handler-function handler) session params)))
+        (/debug "processing request: ~a" method)
         (make-response (get-field request :id) result))
     (lsp-error (condition)
       (make-error-response (get-field request :id) condition))))
@@ -288,7 +243,7 @@
 
 (defmethod run ((self session))
   (with-slots (io event-queue server) self
-    (setf (slot-value event-queue 'fn)
+    (setf (worker-function event-queue)
           (lambda (event)
             (process-event self event)))
     (start event-queue)
@@ -299,10 +254,10 @@
                 (let ((message (read-rpc (input-stream io))))
                   (submit-event self 'process-message message)))
             (sb-int:closed-stream-error ()
-              (/info "remote session disconnected (stream closed)")
+              (/info "session disconnected: stream closed")
               (signal 'session-exit))
             (end-of-file ()
-              (/info "remote session disconnected (end of file)")
+              (/info "session disconnected: end of file")
               (signal 'session-exit))
             (error (c)
               (/error "aborted read: session shutdown: ~a" c)

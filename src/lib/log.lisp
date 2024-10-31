@@ -1,6 +1,18 @@
 ;;;; This is a small library for emitting timestamped log messages, thread-safely.
 
-(in-package :coalton-lsp)
+(defpackage #:coalton-lsp.lib.log
+  (:use #:cl)
+  (:export #:*logger*
+           #:/debug
+           #:/error
+           #:/info
+           #:/warn
+           #:/trace
+           #:/trace-p
+           #:set-log-level
+           #:with-logging-context))
+
+(in-package :coalton-lsp.lib.log)
 
 (defun write-timestamp (stream)
   (multiple-value-bind (ss mm hh)
@@ -73,6 +85,8 @@
 
 (defun set-log-level (level)
   (setf (slot-value *logger* 'level) level))
+
+#+xxx (set-log-level :trace)
 
 (defclass file-logger (stream-logger)
   ())

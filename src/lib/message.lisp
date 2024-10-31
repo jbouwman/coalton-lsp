@@ -1,4 +1,32 @@
-(in-package #:coalton-lsp)
+(defpackage #:coalton-lsp.lib.message
+  (:use #:cl
+        #:coalton-lsp.lib.list
+        #:coalton-lsp.lib.name)
+  (:export #:copy-message
+           #:define-atom
+           #:define-class
+           #:define-enum
+           #:define-union
+           #:find-message-class
+           #:get-field
+           #:json-key
+           #:json-value
+           #:make-message
+           #:message
+           #:message-atom
+           #:message-class
+           #:message-class-p
+           #:message-enum
+           #:message-field
+           #:message-fields
+           #:message-type
+           #:message-union
+           #:message-value
+           #:optional
+           #:set-field
+           #:set-field-class))
+
+(in-package #:coalton-lsp.lib.message)
 
 (defvar *message-classes*
   (make-hash-table))
@@ -49,9 +77,9 @@ The output value will have string-valued map keys.")
   (etypecase type
     (list
      (destructuring-bind (type &key optional vector) type
-       (list (get-message-class type) optional vector)))
+       (list (find-message-class type) optional vector)))
     (symbol
-     (list (get-message-class type) nil nil))))
+     (list (find-message-class type) nil nil))))
 
 (defun make-field (spec)
   (destructuring-bind (name type) spec
@@ -99,18 +127,21 @@ The output value will have string-valued map keys.")
   `(setf (gethash ',name *message-classes*)
          (make-instance 'message-atom :name ',name)))
 
-(defmacro define-message (name parent-classes &body field-defs)
+(defmacro define-class (name parent-classes &body field-defs)
   `(let ((message (make-instance 'message-class :name ',name)))
      (loop :for class :in ',parent-classes
-           :do (loop :for field :across (slot-value (get-message-class class) 'fields)
+           :do (loop :for field :across (slot-value (find-message-class class) 'fields)
                      :do (add-field message field)))
      (loop :for field-def :in ',field-defs
            :do (add-field message (make-field field-def)))
      (setf (gethash ',name *message-classes*) message)))
 
-(defun get-message-class (name)
+(defun find-message-class (name)
   (or (gethash name *message-classes*)
       (error "undefined message class: ~a" name)))
+
+(defun message-class-p (name)
+  (not (null (gethash name *message-classes*))))
 
 ;;; Enums
 
@@ -148,7 +179,7 @@ The output value will have string-valued map keys.")
   `(setf (gethash ',name *message-classes*)
          (make-instance 'message-union
                         :name ',name
-                        :classes (mapcar #'get-message-class
+                        :classes (mapcar #'find-message-class
                                          ',union-classes))))
 
 ;;; Messages compose a class and a value
@@ -168,7 +199,7 @@ The output value will have string-valued map keys.")
 (defun make-message (class &optional value)
   (assert (symbolp class))
   (make-instance 'message
-                 :class (get-message-class class)
+                 :class (find-message-class class)
                  :value value))
 
 (defun %get-key (message key)
