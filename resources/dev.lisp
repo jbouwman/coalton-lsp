@@ -1,18 +1,19 @@
 ;;;; helpers for interactive development: starting network server,
 ;;;; changing logging options
 
-(defpackage #:coalton-lsp-user
+(defpackage #:coalton-lsp.dev
   (:use #:cl
-        #:coalton-lsp))
+        #:coalton-lsp)
+  (:shadow #:restart))
 
 (in-package #:coalton-lsp-user)
 
-(defun restart-server ()
+(defun restart ()
   (when *server*
     (stop-server))
-  (coalton-lsp::start-network-server coalton-lsp::*default-port*))
+  (start-network-server *server-port*))
 
-;;; (restart-server)
+;;; (restart)
 
 (defun enable-debugging ()
   (coalton-lsp.lib.log:set-log-level :debug))

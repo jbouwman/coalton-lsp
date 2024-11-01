@@ -72,8 +72,8 @@
 
 ;;; TODO make a less fugly version of set-field
 
-(defun handle-initialize (session params)
-  (initializing-session session (message-value params))
+(defun handle-initialize (session request)
+  (initializing-session session (message-value (request-params request)))
   (let ((result (make-message 'initialize-result)))
     (set-field result (list :server-info :name) "Coalton")
     (set-field result (list :capabilities :text-document-sync :open-close) t)
@@ -90,7 +90,8 @@
     (set-field result (list :capabilities :semantic-tokens-provider :full) t)
     (set-field result (list :capabilities :position-encoding)
                (position-encoding session))
-    result))
+    (make-response (get-field request :id)
+                   result)))
 
 ;;; request: initialize
 
@@ -100,8 +101,8 @@
 
 ;;; request: initialized
 
-(defun handle-initialized (session params)
-  (declare (ignore params))
+(defun handle-initialized (session request)
+  (declare (ignore request))
   (initialized-session session))
 
 (define-handler "initialized"
@@ -140,10 +141,10 @@
 
 ;;; request: shutdown
 
-(defun handle-shutdown (session params)
-  (declare (ignore params))
+(defun handle-shutdown (session request)
   (shutdown-session session)
-  (make-message 'empty))
+  (make-response (get-field request :id)
+                 (make-message 'empty)))
 
 (define-handler "shutdown"
   empty
@@ -199,8 +200,8 @@
 
 ;;; request: textDocument/didChange
 
-(defun handle-text-document-did-change (session params)
-  (change-document session (get-field params :text-document)))
+(defun handle-text-document-did-change (session request)
+  (change-document session (get-field (request-params request) :text-document)))
 
 (define-handler "textDocument/didChange"
   did-change-text-document-params
@@ -214,8 +215,8 @@
 
 ;;; request: textDocument/didOpen
 
-(defun handle-text-document-did-open (session params)
-  (open-document session (get-field params :text-document)))
+(defun handle-text-document-did-open (session request)
+  (open-document session (get-field (request-params request) :text-document)))
 
 (define-handler "textDocument/didOpen"
   did-open-text-document-params
@@ -246,6 +247,11 @@
   handle-text-document-document-link)
 
 ;;; request: textDocument/documentSymbol
+
+(defun handle-text-document-document-symbol (session request)
+  (make-vector-response (get-field request :id)
+                        (document-symbols (get-field (request-params request)
+                                                     (list :text-document :uri)))))
 
 (define-handler "textDocument/documentSymbol"
   document-symbol-params
@@ -325,11 +331,6 @@
 
 ;;; request: textDocument/publishDiagnostics
 
-(defun handle-text-document-publish-diagnostics (session params)
-  (declare (ignorable session params))
-  ;; FIXME restore
-  )
-
 (define-handler "textDocument/publishDiagnostics"
   publish-diagnostics-params
   handle-text-document-publish-diagnostics)
@@ -372,12 +373,13 @@
 
 ;;; request: textDocument/semanticTokens/range
 
-(defun handle-text-document-semantic-tokens-range (session params)
-  ;;(session-semantic-tokens-range session (message-value params))
+(defun handle-text-document-semantic-tokens-range (session request)
+  ;;(session-semantic-tokens-range session (message-value request))
   (let ((result (make-message 'semantic-tokens)))
     (set-field result (list :data)
                (list 0 9 9 0 0))
-    result))
+    (make-response (get-field request :id)
+                   result)))
 
 ;;; request: textDocument/semanticTokens/range
 
@@ -489,8 +491,8 @@
 
 ;;; request: workspace/didChangeConfiguration
 
-(defun handle-workspace-did-change-configuration (session params)
-  (update-configuration session (get-field params :settings)))
+(defun handle-workspace-did-change-configuration (session request)
+  (update-configuration session (get-field (request-params request) :settings)))
 
 (define-handler "workspace/didChangeConfiguration"
   did-change-configuration-params

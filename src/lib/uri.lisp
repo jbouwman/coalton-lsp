@@ -3,6 +3,7 @@
 (defpackage #:coalton-lsp.lib.uri
   (:use #:cl)
   (:export #:parse
+           #:uri
            #:uri-path
            #:input-stream))
 

@@ -18,28 +18,83 @@
       (let* ((filename (uri:uri-path uri))
              (source (source:make-source-file filename)))
         (with-open-stream (stream (source:source-stream source))
-          (parser:with-reader-context stream
-            (parser:read-program stream source ':file)))))))
+          (values (parser:with-reader-context stream
+                    (parser:read-program stream source ':file))
+                  (source::find-line-offsets stream)))))))
 
-(defun tokenize (type locatable)
+(defun probe-offset (offsets index value)
+  (let ((lo (nth index offsets))
+        (hi (nth (1+ index) offsets)))
+    (cond ((< value lo) -1)
+          ((not hi)      0)
+          ((< hi value)  1)
+          (t             0))))
+
+(defun find-line (offsets value)
+  (loop :with low := 0
+        :with high := (length offsets)
+        :with index := (floor (/ (+ low high) 2))
+        :do (case (probe-offset offsets index value)
+              ( 0 (return (values index (nth index offsets))))
+              (-1 (setf high index))
+              ( 1 (setf low index)))
+            (setf index (floor (/ (+ low high) 2)))))
+
+(defun offset-position (offsets location)
   (destructuring-bind (start . end)
-      (source:location-span (source:location locatable))
-    (list type start (- end start))))
+      (source:location-span location)
+    (multiple-value-bind (start-line start-offset)
+        (find-line offsets start)
+      (multiple-value-bind (end-line end-offset)
+          (find-line offsets end)
+        `(("start" .
+                   (("line" . ,start-line)
+                    ("character" . ,(- start start-offset))))
+          ("end" .
+                 (("line" . ,end-line)
+                  ("character" . ,(- end end-offset)))))))))
 
-(defgeneric visit-tokens (element visitor))
+(defgeneric lsp-visit-define (visitor offsets define))
 
-(defmethod visit-tokens ((self program:toplevel-define) f)
-  (funcall f (tokenize :function (program:toplevel-define-name self))))
+(defclass document-symbol-visitor ()
+  ((symbols :initform nil
+            :accessor symbols)))
 
-(defun visit-program (file-uri)
-  (let ((program (parse-program file-uri))
-        (tokens nil))
-    (dolist (define (program:program-defines program))
-      (visit-tokens define (lambda (x)
-                             (push x tokens))))
-    tokens))
+(defun %mds (name detail kind range selection-range)
+  (let ((message (make-message 'document-symbol)))
+    (set-field message :name name)
+    (set-field message :detail detail)
+    (set-field message :kind kind)
+    (set-field message :range range)
+    (set-field message :selection-range selection-range)
+    message))
 
-;; (visit-program "file:///Users/jlbouwman/git/coalton-lsp/resources/fib.coal")
+(defmethod lsp-visit-define ((self document-symbol-visitor) offsets toplevel-define)
+  (let ((name (program::toplevel-define-name toplevel-define)))
+    (push (%mds (string-downcase
+                 (symbol-name
+                  (coalton-impl/parser/expression::node-variable-name name)))
+                "Integer -> Integer"
+                :function
+                (offset-position offsets (source:location toplevel-define))
+                (offset-position offsets (source:location name)))
+          (symbols self))))
+
+(defmethod visit-program-node ((self program:toplevel-define) visitor)
+  (funcall visitor self))
+
+(defun visit-program (visitor offsets program)
+  (dolist (define (program:program-defines program))
+    (lsp-visit-define visitor offsets define)))
+
+(defun document-symbols (file-uri)
+  (multiple-value-bind (program offsets)
+      (parse-program file-uri)
+    (let ((visitor (make-instance 'document-symbol-visitor)))
+      (visit-program visitor offsets program)
+      (symbols visitor))))
+
+;; (document-symbols "file:///Users/jlbouwman/git/coalton-lsp/resources/fib.coal")
 
 ;;; 'diagnostics' is the LSP term for parser warnings and compiler errors
 
