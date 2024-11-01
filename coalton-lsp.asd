@@ -8,20 +8,21 @@
                #:usocket)
   :pathname "src/"
   :serial t
-  :components ((:file "package")
-               ;; 'lib' contains general purpose code
-               (:module "lib"
+  :components ((:module "lib"
                 :serial t
                 :components ((:file "log")
                              (:file "list")
                              (:file "name")
-                             (:file "rpc")
                              (:file "process")
                              (:file "message")
                              (:file "json")
+                             (:file "json-rpc")
                              (:file "uri")))
+               (:file "package")
+               (:file "compiler")
                (:file "session")
-               (:file "protocol")
+               (:file "request-value")
+               (:file "request-handler")
                (:file "server")))
 
 (defsystem #:coalton-lsp/tests
@@ -31,9 +32,11 @@
   :serial t
   :components ((:file "package")
                (:file "mock")
-               (:file "json-tests")
+               (:module "lib"
+                :serial t
+                :components ((:file "json-tests")
+                             (:file "message-tests")))
                (:file "lsp-tests")
-               (:file "message-tests")
                (:file "protocol-tests")
                (:file "rpc-tests")
                (:file "session-tests")))

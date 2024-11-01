@@ -2,7 +2,19 @@
 ;;;;
 ;;;; https://www.jsonrpc.org/specification
 
-(in-package :coalton-lsp)
+(defpackage :coalton-lsp.lib.json-rpc
+  (:use #:cl
+        #:coalton-lsp.lib.json
+        #:coalton-lsp.lib.log
+        #:coalton-lsp.lib.name)
+  (:export #:read-headers
+           #:read-rpc
+           #:parsed-content
+           #:rpc-message-field
+           #:write-headers
+           #:write-rpc))
+
+(in-package :coalton-lsp.lib.json-rpc)
 
 (defun read-header (stream)
   "Read a HTTP-header-formatted key value pair from STREAM."
@@ -86,23 +98,23 @@
       (setf parsed-content (decode-json content)))
     parsed-content))
 
-(defun message-field (rpc-message key)
+(defun rpc-message-field (rpc-message key)
   (cdr (assoc (camel-case key) (parsed-content rpc-message) :test #'string-equal)))
 
 (defun message-id (rpc-message)
-  (message-field rpc-message :id))
+  (rpc-message-field rpc-message :id))
 
 (defun message-type (rpc-message)
-  (let ((id (message-field rpc-message :id))
-        (method (message-field rpc-message :method)))
+  (let ((id (rpc-message-field rpc-message :id))
+        (method (rpc-message-field rpc-message :method)))
     (cond ((and method id)
-           'request-message)
+           'request)
           ((and method (not id))
-           'notification-message)
+           'notification)
           ((and (not method) id)
-           'response-message)
+           'response)
           (t
-           nil))))
+           'incomplete))))
 
 (defun trunc (n string)
   (if (< n (length string))
@@ -110,13 +122,9 @@
       string))
 
 (defmethod print-object ((self rpc-message) stream)
-  (let* ((id (message-field self :id))
-         (method (message-field self :method))
-         (type (case (message-type self)
-                 (request-message "request")
-                 (notification-message "request")
-                 (response-message "response")
-                 (t "incomplete message"))))
+  (let* ((id (rpc-message-field self :id))
+         (method (rpc-message-field self :method))
+         (type (message-type self)))
     (print-unreadable-object (self stream :type t :identity t)
       (format stream "~a ~a id: ~a value: ~s"
               type

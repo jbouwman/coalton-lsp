@@ -1,6 +1,7 @@
-(in-package #:coalton-lsp/tests)
+(in-package #:coalton-lsp.tests)
 
 (deftest protocol-tests/initialize ()
-  (let ((params (lsp::request-params (lsp::make-request (rpc-example "initialize.json")))))
-    (lsp::get-field params :root-uri)
-    (lsp::get-field params :workspace-folders)))
+  (let ((params (coalton-lsp::request-params
+                 (coalton-lsp::make-request (rpc-example "initialize.json")))))
+    (get-field params :root-uri)
+    (get-field params :workspace-folders)))

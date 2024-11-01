@@ -1,10 +1,14 @@
-(fiasco:define-test-package #:coalton-lsp/tests
+(fiasco:define-test-package #:coalton-lsp.tests
   (:use
-   #:cl)
-  (:local-nicknames
-   (#:lsp #:coalton-lsp)))
+   #:cl
+   #:coalton-lsp
+   #:coalton-lsp.lib.process
+   #:coalton-lsp.lib.name
+   #:coalton-lsp.lib.message
+   #:coalton-lsp.lib.json
+   #:coalton-lsp.lib.json-rpc))
 
-(in-package #:coalton-lsp/tests)
+(in-package #:coalton-lsp.tests)
 
 (defun is-string= (a b &optional (message "input"))
   "If strings A and B differ, signal a failure reporting the first position where this is true."
@@ -45,7 +49,7 @@
       (pipe input output))))
 
 (defun rpc-example (name)
-  (make-instance 'lsp::rpc-message
+  (make-instance 'coalton-lsp.lib.json-rpc::rpc-message
     :content (read-file (rpc-file name))))
 
 #+example (rpc-example "initialize.json")

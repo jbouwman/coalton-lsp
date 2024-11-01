@@ -18,8 +18,3 @@ M-x eglot
 ### fib.coal
 
 A small coalton program for testing
-
-### spec.ts
-
-All of the TypeScript code extracted from https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
-

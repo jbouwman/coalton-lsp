@@ -1,6 +1,10 @@
 ;;;; Functions related to names and identifiers
 
-(in-package #:coalton-lsp)
+(defpackage #:coalton-lsp.lib.name
+  (:use #:cl)
+  (:export #:camel-case))
+
+(in-package #:coalton-lsp.lib.name)
 
 (defun camel-case (keyword)
   "Convert hyphen-delimited keyword identifiers to camel-cased strings."
