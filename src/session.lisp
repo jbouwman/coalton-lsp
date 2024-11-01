@@ -85,7 +85,7 @@
       (submit-event session 'document-changed uri))))
 
 (defun update-diagnostics (session uri)
-  (let ((message (make-message 'text-document-publish-diagnostics-params)))
+  (let ((message (make-message 'publish-diagnostics-params)))
     (set-field message :uri uri)
     (set-field message :diagnostics (compile-uri uri))
     (notify session "textDocument/publishDiagnostics" message)))
@@ -122,6 +122,15 @@
       (set-field response :result (message-value result))
       response)))
 
+(defun make-vector-response (id result)
+  (let ((class (copy-message (find-message-class 'response-message))))
+    (set-field-vector-class class :result (message-class (first result)))
+    (let ((response (make-instance 'message :class class)))
+      (set-field response :jsonrpc "2.0")
+      (set-field response :id id)
+      (set-field response :result (mapcar #'message-value result))
+      response)))
+
 (defun make-error-response (id condition)
   (let ((response (make-message 'response-message)))
     (set-field response :jsonrpc "2.0")
@@ -141,9 +150,6 @@
 
 (defun notify (session method value)
   (submit-event session 'write-message (make-notification method value)))
-
-(defun message-p (message message-class)
-  (eq (name (slot-value message 'class)) message-class))
 
 (define-condition lsp-error (error)
   ((code :initarg :code
@@ -208,9 +214,8 @@
 
 (defun process-notification (session request)
   (handler-case
-      (let* ((handler (get-message-handler (request-method request)))
-             (params (request-params request)))
-        (funcall (message-handler-function handler) session params))
+      (let ((handler (get-message-handler (request-method request))))
+        (funcall (message-handler-function handler) session request))
     (lsp-error ()
       ;; A message was logged when the error was signaled, and
       ;; there's nothing to return to the client. No-op.
@@ -218,22 +223,18 @@
 
 (defun process-request (session request)
   (handler-case
-      (let* ((method (request-method request))
-             (handler (get-message-handler method))
-             (params (request-params request))
-             (result (funcall (message-handler-function handler) session params)))
-        (/debug "processing request: ~a" method)
-        (make-response (get-field request :id) result))
+      (let ((handler (get-message-handler (request-method request))))
+        (funcall (message-handler-function handler) session request))
     (lsp-error (condition)
       (make-error-response (get-field request :id) condition))))
 
 (defun process-message (session message)
   (let ((request (make-request message)))
-    (cond ((message-p request 'notification-message)
-           (process-notification session request))
-          (t
+    (cond ((rpc-message-field message :id)
            (submit-event session 'write-message
-                         (process-request session request))))))
+                         (process-request session request)))
+          (t
+           (process-notification session request)))))
 
 (defun write-message (session response)
   (let ((json (to-json response)))

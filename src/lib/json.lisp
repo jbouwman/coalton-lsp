@@ -3,7 +3,8 @@
         #:coalton-lsp.lib.message)
   (:export #:decode-json
            #:reencode-json
-           #:to-json))
+           #:to-json
+           #:to-json-array))
 
 (in-package #:coalton-lsp.lib.json)
 
@@ -57,22 +58,22 @@
 ;;; properties of a field.
 
 (defun jzon-field-value (field value)
-  (with-slots (class vector) field
+  (with-slots (class-name vector) field
     (cond (vector
            (loop :with result := (make-array (length value))
                  :for element :in value
                  :for i :below (length value)
                  :do (setf (aref result i)
-                           (jzon-value class element))
+                           (jzon-value (find-message-class class-name) element))
                  :finally (return result)))
           (t
-           (jzon-value class value)))))
+           (jzon-value (find-message-class class-name) value)))))
 
 (defmethod jzon-value ((self message-class) value)
   (let ((jzon-map (make-hash-table :test 'equal)))
     (loop :for field :across (message-fields self)
           :do (with-slots (resolve optional) field
-                (let ((field-value (cdr (assoc (json-key field) value))))
+                (let ((field-value (cdr (assoc (json-key field) value :test #'string=))))
                   (when (or field-value (not optional))
                     (setf (gethash (json-key field) jzon-map)
                           (jzon-field-value field field-value))))))
@@ -81,3 +82,11 @@
 (defun to-json (message)
   (encode-json (jzon-value (message-class message)
                            (message-value message))))
+
+(defun to-json-array (array)
+  (let ((jzon-value (make-array (length array))))
+    (loop :for i :below (length array)
+          :do (setf (aref jzon-value i)
+                    (jzon-value (message-class (nth i array))
+                                (message-value (nth i array)))))
+    (encode-json jzon-value)))

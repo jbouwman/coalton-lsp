@@ -1,9 +1,8 @@
 ;;;; LSP message parameter value definitions
 ;;;;
 ;;;; A strict translation of the interfaces defined by the Language
-;;;; Server Protocol 3.17 spec. Lines below that are prefixed with ;;;
-;;;; {|,?}  are derived directly from it. A question mark indicates
-;;;; that there is not yet a lisp definition for the represented type.
+;;;; Server Protocol 3.17 spec: lines that are prefixed with ;;;
+;;;; | are derived directly from it.
 ;;;;
 ;;;; The DEFINE-* macros used here are defined in lib/message.lisp.
 ;;;;
@@ -15,67 +14,24 @@
 
 (define-atom boolean)
 
-;;; | type integer = number;
-
 (define-atom integer)
 
-;;; | type uinteger = number;
-
-(deftype uinteger () '(integer 0 #.(1- (expt 2 31))))
+(deftype uinteger ()
+  '(integer 0 #.(1- (expt 2 31))))
 
 (define-atom uinteger)
 
-;;; | type decimal = number;
-
 (define-atom decimal)
 
-;;; | type LSPAny = LSPObject | LSPArray | string | integer | uinteger |
-;;; |     decimal | boolean | null;
-;;; | type LSPObject = { [key: string]: LSPAny };
-
 (define-atom lsp-any)
-
-;;; | type LSPArray = LSPAny[];
-
-;;; (array values are represented using the :VECTOR T field option)
-
-;;; | interface Message {
-;;; |     jsonrpc: string;
-;;; | }
 
 (define-class message ()
   (:jsonrpc string))
 
-;;; | interface RequestMessage extends Message {
-;;; |     id: integer | string;
-;;; |     method: string;
-;;; |     params?: array | object;
-;;; | }
-
 (define-class request-message (message)
   (:id integer)
   (:method string)
-  (:params lsp-any))
-
-;;; | namespace ErrorCodes {
-;;; |     ParseError: integer = -32700;
-;;; |     InvalidRequest: integer = -32600;
-;;; |     MethodNotFound: integer = -32601;
-;;; |     InvalidParams: integer = -32602;
-;;; |     InternalError: integer = -32603;
-;;; |     jsonrpcReservedErrorRangeStart: integer = -32099;
-;;; |     serverErrorStart: integer = jsonrpcReservedErrorRangeStart;
-;;; |     ServerNotInitialized: integer = -32002;
-;;; |     UnknownErrorCode: integer = -32001;
-;;; |     jsonrpcReservedErrorRangeEnd = -32000;
-;;; |     serverErrorEnd: integer = jsonrpcReservedErrorRangeEnd;
-;;; |     lspReservedErrorRangeStart: integer = -32899;
-;;; |     RequestFailed: integer = -32803;
-;;; |     ServerCancelled: integer = -32802;
-;;; |     ContentModified: integer = -32801;
-;;; |     RequestCancelled: integer = -32800;
-;;; |     lspReservedErrorRangeEnd: integer = -32800;
-;;; | }
+  (:params (lsp-any :optional t)))
 
 (define-enum error-code ()
   (:unknown-error-code -32001)
@@ -90,119 +46,65 @@
   (:server-cancelled -32802)
   (:request-failed -32803))
 
-;;; | interface ResponseError {
-;;; |     code: integer;
-;;; |     message: string;
-;;; |     data?: LSPAny;
-;;; | }
-
 (define-class response-error ()
   (:code error-code)
   (:message string)
-  (:data lsp-any))
+  (:data (lsp-any :optional t)))
 
-;;; | interface ResponseMessage extends Message {
-;;; |     id: integer | string | null;
-;;; |     result?: LSPAny;
-;;; |     error?: ResponseError;
-;;; | }
+(define-union response-message-id (integer string))
 
 (define-class response-message (message)
-  (:id integer)
+  (:id (response-message-id :optional t))
   (:result (lsp-any :optional t))
   (:error (response-error :optional t)))
 
-;;; | interface NotificationMessage extends Message {
-;;; |     method: string;
-;;; |     params?: array | object;
-;;; | }
-
 (define-class notification-message (message)
   (:method string)
-  (:params lsp-any))
-
-;;; | type ProgressToken = integer | string;
+  (:params (lsp-any :optional t)))
 
 (define-union progress-token (integer string))
 
-;;; | interface CancelParams {
-;;; |     id: integer | string;
-;;; | }
-
 (define-class cancel-params ()
   (:id progress-token))
-
-;;; | interface ProgressParams <T> {
-;;; |     token: ProgressToken;
-;;; |     value: T;
-;;; | }
 
 (define-class progress-params ()
   (:id progress-token)
   (:value lsp-any))
 
-;;; ? interface HoverParams {
+;;; | interface HoverParams {
 ;;; |     textDocument: string; position: { line: uinteger; character: uinteger; };
 ;;; | }
 
-;;; ? interface HoverResult {
+;;; | interface HoverResult {
 ;;; |     value: string;
 ;;; | }
-
-;; type DocumentUri = string;
 
 (deftype document-uri () 'string)
 
 (define-atom document-uri)
 
-;; type URI = string;
-
 (deftype uri () 'string)
 
 (define-atom uri)
 
-;;; ? interface RegularExpressionsClientCapabilities {
+;;; | interface RegularExpressionsClientCapabilities {
 ;;; |     engine: string;
 ;;; |     version?: string;
 ;;; | }
 ;;; | EOL: string[] = ['\n', '\r\n', '\r'];
 
-;;; | interface Position {
-;;; |     line: uinteger;
-;;; |     character: uinteger;
-;;; | }
-
 (define-class position ()
   (:line uinteger)
   (:character uinteger))
-
-;;; | type PositionEncodingKind = string;
-;;; | namespace PositionEncodingKind {
-;;; |     UTF8: PositionEncodingKind = 'utf-8';
-;;; |     UTF16: PositionEncodingKind = 'utf-16';
-;;; |     UTF32: PositionEncodingKind = 'utf-32';
-;;; | }
 
 (define-enum position-encoding-kind ()
   (:utf8 "utf-8")
   (:utf16 "utf-16")
   (:utf32 "utf-32"))
 
-;;; | interface Range {
-;;; |     start: Position;
-;;; |     end: Position;
-;;; | }
-
 (define-class range ()
   (:start position)
   (:end position))
-
-;;; | interface TextDocumentItem {
-;;; |     uri: DocumentUri;
-;;; |     languageId: string;
-;;; |     version: integer;
-;;; |     text: string;
-;;; | }
 
 (define-class text-document-item ()
   (:uri uri)
@@ -210,36 +112,18 @@
   (:version integer)
   (:text string))
 
-;;; | interface TextDocumentIdentifier {
-;;; |     uri: DocumentUri;
-;;; | }
-
 (define-class text-document-identifier ()
   (:uri uri))
-
-;;; | interface VersionedTextDocumentIdentifier extends TextDocumentIdentifier {
-;;; |     version: integer;
-;;; | }
 
 (define-class versioned-text-document-identifier (text-document-identifier)
   (:version integer))
 
-;;; | interface OptionalVersionedTextDocumentIdentifier extends TextDocumentIdentifier {
-;;; |     version: integer | null;
-;;; | }
-
 (define-class optional-versioned-text-document-identifier (text-document-identifier)
   (:version (integer :optional t)))
 
-;;; ? interface TextDocumentPositionParams {
+;;; | interface TextDocumentPositionParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     position: Position;
-;;; | }
-
-;;; | interface DocumentFilter {
-;;; |     language?: string;
-;;; |     scheme?: string;
-;;; |     pattern?: string;
 ;;; | }
 
 (define-class document-filter ()
@@ -247,53 +131,40 @@
   (:scheme (string :optional t))
   (:pattern (string :optional t)))
 
-;;; ? type DocumentSelector = DocumentFilter[];
+;;; | type DocumentSelector = DocumentFilter[];
 
-;;; ? interface TextEdit {
+;;; | interface TextEdit {
 ;;; |     range: Range;
 ;;; |     newText: string;
 ;;; | }
 
-;;; ? interface ChangeAnnotation {
+;;; | interface ChangeAnnotation {
 ;;; |     label: string;
 ;;; |     needsConfirmation?: boolean;
 ;;; |     description?: string;
 ;;; | }
 
-;;; ? type ChangeAnnotationIdentifier = string;
+;;; | type ChangeAnnotationIdentifier = string;
 
-;;; ? interface AnnotatedTextEdit extends TextEdit {
+;;; | interface AnnotatedTextEdit extends TextEdit {
 ;;; |     annotationId: ChangeAnnotationIdentifier;
 ;;; | }
 
-;;; ? interface TextDocumentEdit {
+;;; | interface TextDocumentEdit {
 ;;; |     textDocument: OptionalVersionedTextDocumentIdentifier;
 ;;; |     edits: (TextEdit | AnnotatedTextEdit)[];
-;;; | }
-
-;;; | interface Location {
-;;; |     uri: DocumentUri;
-;;; |     range: Range;
 ;;; | }
 
 (define-class location ()
   (:uri uri)
   (:range range))
 
-;;; ? interface LocationLink {
+;;; | interface LocationLink {
 ;;; |     originSelectionRange?: Range;
 ;;; |     targetUri: DocumentUri;
 ;;; |     targetRange: Range;
 ;;; |     targetSelectionRange: Range;
 ;;; | }
-
-;;; | namespace DiagnosticSeverity {
-;;; |     Error: 1 = 1;
-;;; |     Warning: 2 = 2;
-;;; |     Information: 3 = 3;
-;;; |     Hint: 4 = 4;
-;;; | }
-;;; | type DiagnosticSeverity = 1 | 2 | 3 | 4;
 
 (define-enum diagnostic-severity ()
   (:error 1)
@@ -301,36 +172,13 @@
   (:information 3)
   (:hint 4))
 
-;;; | namespace DiagnosticTag {
-;;; |     Unnecessary: 1 = 1;
-;;; |     Deprecated: 2 = 2;
-;;; | }
-;;; | type DiagnosticTag = 1 | 2;
-
 (define-enum diagnostic-tag ()
   (:unnecessary 1)
   (:deprecated 2))
 
-;;; | interface DiagnosticRelatedInformation {
-;;; |     location: Location;
-;;; |     message: string;
-;;; | }
-
 (define-class diagnostic-related-information ()
   (:location location)
   (:message string))
-
-;;; | interface Diagnostic {
-;;; |     range: Range;
-;;; |     severity?: DiagnosticSeverity;
-;;; |     code?: integer | string;
-;;; |     codeDescription?: CodeDescription;
-;;; |     source?: string;
-;;; |     message: string;
-;;; |     tags?: DiagnosticTag[];
-;;; |     relatedInformation?: DiagnosticRelatedInformation[];
-;;; |     data?: LSPAny;
-;;; | }
 
 (define-union diagnostic-code (integer string))
 
@@ -344,55 +192,49 @@
   (:related-information (diagnostic-related-information :vector t :optional t))
   (:data (lsp-any :optional t)))
 
-;;; ? interface CodeDescription {
+;;; | interface CodeDescription {
 ;;; |     href: URI;
 ;;; | }
 
-;;; ? interface Command {
+;;; | interface Command {
 ;;; |     title: string;
 ;;; |     command: string;
 ;;; |     arguments?: LSPAny[];
 ;;; | }
 
-;;; | namespace MarkupKind {
-;;; |     PlainText: 'plaintext' = 'plaintext';
-;;; |     Markdown: 'markdown' = 'markdown';
-;;; | }
-;;; | type MarkupKind = 'plaintext' | 'markdown';
-
 (define-enum markup-kind ()
   (:plaintext "plaintext")
   (:markdown "markdown"))
 
-;;; ? interface MarkupContent {
+;;; | interface MarkupContent {
 ;;; |     kind: MarkupKind;
 ;;; |     value: string;
 ;;; | }
 
-;;; ? interface MarkdownClientCapabilities {
+;;; | interface MarkdownClientCapabilities {
 ;;; |     parser: string;
 ;;; |     version?: string;
 ;;; |     allowedTags?: string[];
 ;;; | }
 
-;;; ? interface CreateFileOptions {
+;;; | interface CreateFileOptions {
 ;;; |     overwrite?: boolean;
 ;;; |     ignoreIfExists?: boolean;
 ;;; | }
 
-;;; ? interface CreateFile {
+;;; | interface CreateFile {
 ;;; |     kind: 'create';
 ;;; |     uri: DocumentUri;
 ;;; |     options?: CreateFileOptions;
 ;;; |     annotationId?: ChangeAnnotationIdentifier;
 ;;; | }
 
-;;; ? interface RenameFileOptions {
+;;; | interface RenameFileOptions {
 ;;; |     overwrite?: boolean;
 ;;; |     ignoreIfExists?: boolean;
 ;;; | }
 
-;;; ? interface RenameFile {
+;;; | interface RenameFile {
 ;;; |     kind: 'rename';
 ;;; |     oldUri: DocumentUri;
 ;;; |     newUri: DocumentUri;
@@ -400,19 +242,19 @@
 ;;; |     annotationId?: ChangeAnnotationIdentifier;
 ;;; | }
 
-;;; ? interface DeleteFileOptions {
+;;; | interface DeleteFileOptions {
 ;;; |     recursive?: boolean;
 ;;; |     ignoreIfNotExists?: boolean;
 ;;; | }
 
-;;; ? interface DeleteFile {
+;;; | interface DeleteFile {
 ;;; |     kind: 'delete';
 ;;; |     uri: DocumentUri;
 ;;; |     options?: DeleteFileOptions;
 ;;; |     annotationId?: ChangeAnnotationIdentifier;
 ;;; | }
 
-;;; ? interface WorkspaceEdit {
+;;; | interface WorkspaceEdit {
 ;;; |     changes?: { [uri: DocumentUri]: TextEdit[]; };
 ;;; |     documentChanges?: (
 ;;; |         TextDocumentEdit[] |
@@ -423,20 +265,10 @@
 ;;; |     };
 ;;; | }
 
-;;; | type ResourceOperationKind = 'create' | 'rename' | 'delete';
-;;; | namespace ResourceOperationKind {
-;;; |     Create: ResourceOperationKind = 'create';
-;;; |     Rename: ResourceOperationKind = 'rename';
-;;; |     Delete: ResourceOperationKind = 'delete';
-;;; | }
-
 (define-enum resource-operation-kind ()
   (:create "create")
   (:rename "rename")
   (:delete "delete"))
-
-;;; | type FailureHandlingKind = 'abort' | 'transactional' | 'undo'
-;;; |     | 'textOnlyTransactional';
 
 (define-enum failure-handling-kind ()
   (:abort "abort")
@@ -444,90 +276,61 @@
   (:undo "undo")
   (:text-only-transactional "textOnlyTransactional"))
 
-;;; ? interface Registration {
+;;; | interface Registration {
 ;;; |     id: string;
 ;;; |     method: string;
 ;;; |     registerOptions?: LSPAny;
 ;;; | }
 
-;;; ? interface RegistrationParams {
+;;; | interface RegistrationParams {
 ;;; |     registrations: Registration[];
-;;; | }
-
-;;; | interface StaticRegistrationOptions {
-;;; |     id?: string;
 ;;; | }
 
 (define-class static-registration-options ()
   (:id (string :optional t)))
 
-;;; | interface TextDocumentRegistrationOptions {
-;;; |     documentSelector: DocumentSelector | null;
-;;; | }
-
 (define-class text-document-registration-options ()
   (:document-selector (document-filter :vector t :optional t)))
 
-;;; ? interface Unregistration {
+;;; | interface Unregistration {
 ;;; |     id: string;
 ;;; |     method: string;
 ;;; | }
 
-;;; ? interface UnregistrationParams {
+;;; | interface UnregistrationParams {
 ;;; |     unregisterations: Unregistration[];
 ;;; | }
 
-;;; ? interface SetTraceParams {
+;;; | interface SetTraceParams {
 ;;; |     value: TraceValue;
 ;;; | }
 
-;;; ? interface LogTraceParams {
+;;; | interface LogTraceParams {
 ;;; |     message: string;
 ;;; |     verbose?: string;
 ;;; | }
-
-;;; | namespace TextDocumentSyncKind {
-;;; |     None = 0;
-;;; |     Full = 1;
-;;; |     Incremental = 2;
-;;; | }
-;;; | type TextDocumentSyncKind = 0 | 1 | 2;
 
 (define-enum text-document-sync-kind ()
   (:none 0)
   (:full 1)
   (:incremental 2))
 
-;;; | interface TextDocumentSyncOptions {
-;;; |     openClose?: boolean;
-;;; |     change?: TextDocumentSyncKind;
-;;; | }
-
 (define-class text-document-sync-options ()
   (:open-close (boolean :optional t))
   (:change (text-document-sync-kind :optional t)))
 
-;;; | interface DidOpenTextDocumentParams {
-;;; |     textDocument: TextDocumentItem;
-;;; | }
-
 (define-class did-open-text-document-params ()
   (:text-document text-document-item))
 
-;;; ? interface TextDocumentChangeRegistrationOptions
+;;; | interface TextDocumentChangeRegistrationOptions
 ;;; |     extends TextDocumentRegistrationOptions {
 ;;; |     syncKind: TextDocumentSyncKind;
-;;; | }
-
-;;; | interface DidChangeTextDocumentParams {
-;;; |     textDocument: VersionedTextDocumentIdentifier;
-;;; |     contentChanges: TextDocumentContentChangeEvent[];
 ;;; | }
 
 (define-class did-change-text-document-params ()
   (:text-document versioned-text-document-identifier))
 
-;;; ? type TextDocumentContentChangeEvent = {
+;;; | type TextDocumentContentChangeEvent = {
 ;;; |     range: Range;
 ;;; |     rangeLength?: uinteger;
 ;;; |     text: string;
@@ -535,38 +338,38 @@
 ;;; |     text: string;
 ;;; | };
 
-;;; ? interface WillSaveTextDocumentParams {
+;;; | interface WillSaveTextDocumentParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     reason: TextDocumentSaveReason;
 ;;; | }
 
-;;; ? namespace TextDocumentSaveReason {
+;;; | namespace TextDocumentSaveReason {
 ;;; |     Manual = 1;
 ;;; |     AfterDelay = 2;
 ;;; |     FocusOut = 3;
 ;;; | }
 
-;;; ? type TextDocumentSaveReason = 1 | 2 | 3;
+;;; | type TextDocumentSaveReason = 1 | 2 | 3;
 
-;;; ? interface SaveOptions {
+;;; | interface SaveOptions {
 ;;; |     includeText?: boolean;
 ;;; | }
 
-;;; ? interface TextDocumentSaveRegistrationOptions
+;;; | interface TextDocumentSaveRegistrationOptions
 ;;; |     extends TextDocumentRegistrationOptions {
 ;;; |     includeText?: boolean;
 ;;; | }
 
-;;; ? interface DidSaveTextDocumentParams {
+;;; | interface DidSaveTextDocumentParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     text?: string;
 ;;; | }
 
-;;; ? interface DidCloseTextDocumentParams {
+;;; | interface DidCloseTextDocumentParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; | }
 
-;;; ? interface TextDocumentSyncOptions {
+;;; | interface TextDocumentSyncOptions {
 ;;; |     openClose?: boolean;
 ;;; |     change?: TextDocumentSyncKind;
 ;;; |     willSave?: boolean;
@@ -574,7 +377,7 @@
 ;;; |     save?: boolean | SaveOptions;
 ;;; | }
 
-;;; ? interface NotebookDocument {
+;;; | interface NotebookDocument {
 ;;; |     uri: URI;
 ;;; |     notebookType: string;
 ;;; |     version: integer;
@@ -582,29 +385,29 @@
 ;;; |     cells: NotebookCell[];
 ;;; | }
 
-;;; ? interface NotebookCell {
+;;; | interface NotebookCell {
 ;;; |     kind: NotebookCellKind;
 ;;; |     document: DocumentUri;
 ;;; |     metadata?: LSPObject;
 ;;; |     executionSummary?: ExecutionSummary;
 ;;; | }
 
-;;; ? namespace NotebookCellKind {
+;;; | namespace NotebookCellKind {
 ;;; |     Markup: 1 = 1;
 ;;; |     Code: 2 = 2;
 ;;; | }
 
-;;; ? interface ExecutionSummary {
+;;; | interface ExecutionSummary {
 ;;; |     executionOrder: uinteger;
 ;;; |     success?: boolean;
 ;;; | }
 
-;;; ? interface NotebookCellTextDocumentFilter {
+;;; | interface NotebookCellTextDocumentFilter {
 ;;; |     notebook: string | NotebookDocumentFilter;
 ;;; |     language?: string;
 ;;; | }
 
-;;; ? type NotebookDocumentFilter = {
+;;; | type NotebookDocumentFilter = {
 ;;; |     notebookType: string;
 ;;; |     scheme?: string;
 ;;; |     pattern?: string;
@@ -618,12 +421,12 @@
 ;;; |     pattern: string;
 ;;; | };
 
-;;; ? interface NotebookDocumentSyncClientCapabilities {
+;;; | interface NotebookDocumentSyncClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     executionSummarySupport?: boolean;
 ;;; | }
 
-;;; ? interface NotebookDocumentSyncOptions {
+;;; | interface NotebookDocumentSyncOptions {
 ;;; |     notebookSelector: ({
 ;;; |         notebook: string | NotebookDocumentFilter;
 ;;; |         cells?: { language: string }[];
@@ -634,26 +437,26 @@
 ;;; |     save?: boolean;
 ;;; | }
 
-;;; ? interface NotebookDocumentSyncRegistrationOptions extends
+;;; | interface NotebookDocumentSyncRegistrationOptions extends
 ;;; |     NotebookDocumentSyncOptions, StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface DidOpenNotebookDocumentParams {
+;;; | interface DidOpenNotebookDocumentParams {
 ;;; |     notebookDocument: NotebookDocument;
 ;;; |     cellTextDocuments: TextDocumentItem[];
 ;;; | }
 
-;;; ? interface DidChangeNotebookDocumentParams {
+;;; | interface DidChangeNotebookDocumentParams {
 ;;; |     notebookDocument: VersionedNotebookDocumentIdentifier;
 ;;; |     change: NotebookDocumentChangeEvent;
 ;;; | }
 
-;;; ? interface VersionedNotebookDocumentIdentifier {
+;;; | interface VersionedNotebookDocumentIdentifier {
 ;;; |     version: integer;
 ;;; |     uri: URI;
 ;;; | }
 
-;;; ? interface NotebookDocumentChangeEvent {
+;;; | interface NotebookDocumentChangeEvent {
 ;;; |     metadata?: LSPObject;
 ;;; |     cells?: {
 ;;; |         structure?: {
@@ -669,35 +472,30 @@
 ;;; |     };
 ;;; | }
 
-;;; ? interface NotebookCellArrayChange {
+;;; | interface NotebookCellArrayChange {
 ;;; |     start: uinteger;
 ;;; |     deleteCount: uinteger;
 ;;; |     cells?: NotebookCell[];
 ;;; | }
 
-;;; ? interface DidSaveNotebookDocumentParams {
+;;; | interface DidSaveNotebookDocumentParams {
 ;;; |     notebookDocument: NotebookDocumentIdentifier;
 ;;; | }
 
-;;; ? interface DidCloseNotebookDocumentParams {
+;;; | interface DidCloseNotebookDocumentParams {
 ;;; |     notebookDocument: NotebookDocumentIdentifier;
 ;;; |     cellTextDocuments: TextDocumentIdentifier[];
 ;;; | }
 
-;;; ? interface NotebookDocumentIdentifier {
+;;; | interface NotebookDocumentIdentifier {
 ;;; |     uri: URI;
-;;; | }
-
-;;; | interface DeclarationClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     linkSupport?: boolean;
 ;;; | }
 
 (define-class declaration-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
   (:link-support (boolean :optional t)))
 
-;;; ? namespace FailureHandlingKind {
+;;; | namespace FailureHandlingKind {
 ;;; |     Abort: FailureHandlingKind = 'abort';
 ;;; |     Transactional: FailureHandlingKind = 'transactional';
 ;;; |     TextOnlyTransactional: FailureHandlingKind
@@ -705,7 +503,7 @@
 ;;; |     Undo: FailureHandlingKind = 'undo';
 ;;; | }
 
-;;; ? interface WorkDoneProgressBegin {
+;;; | interface WorkDoneProgressBegin {
 ;;; |     kind: 'begin';
 ;;; |     title: string;
 ;;; |     cancellable?: boolean;
@@ -713,163 +511,124 @@
 ;;; |     percentage?: uinteger;
 ;;; | }
 
-;;; ? interface WorkDoneProgressReport {
+;;; | interface WorkDoneProgressReport {
 ;;; |     kind: 'report';
 ;;; |     cancellable?: boolean;
 ;;; |     message?: string;
 ;;; |     percentage?: uinteger;
 ;;; | }
 
-;;; ? interface WorkDoneProgressEnd {
+;;; | interface WorkDoneProgressEnd {
 ;;; |     kind: 'end';
 ;;; |     message?: string;
-;;; | }
-
-;;; ? interface WorkDoneProgressParams {
-;;; |     workDoneToken?: ProgressToken;
 ;;; | }
 
 (define-class work-done-progress-params ()
   (:work-done-token (progress-token :optional t)))
 
-;;; | interface WorkDoneProgressOptions {
-;;; |     workDoneProgress?: boolean;
-;;; | }
-
 (define-class work-done-progress-options ()
   (:work-done-progress (boolean :optional t)))
 
-;;; | interface PartialResultParams {
-;;; |     partialResultToken?: ProgressToken;
-;;; | }
-
 (define-class partial-result-params ()
   (:partial-result-token (progress-token :optional t)))
-
-;;; | type TraceValue = 'off' | 'messages' | 'verbose';
 
 (define-enum trace-value ()
   (:off "off")
   (:messages "messages")
   (:verbose "verbose"))
 
-;;; | interface DeclarationOptions extends WorkDoneProgressOptions {
-;;; | }
-
 (define-class declaration-options (work-done-progress-options))
 
-;;; ? interface DeclarationRegistrationOptions extends DeclarationOptions,
+;;; | interface DeclarationRegistrationOptions extends DeclarationOptions,
 ;;; |     TextDocumentRegistrationOptions, StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface DeclarationParams extends TextDocumentPositionParams,
+;;; | interface DeclarationParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
-;;; | }
-
-;;; ? interface DefinitionClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     linkSupport?: boolean;
 ;;; | }
 
 (define-class definition-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
   (:link-support (boolean :optional t)))
 
-;;; | interface DefinitionOptions extends WorkDoneProgressOptions {
-;;; | }
-
 (define-class definition-options (work-done-progress-options))
 
-;;; ? interface DefinitionRegistrationOptions extends
+;;; | interface DefinitionRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DefinitionOptions {
 ;;; | }
 
-;;; ? interface DefinitionParams extends TextDocumentPositionParams,
+;;; | interface DefinitionParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
-;;; | }
-
-;;; | interface TypeDefinitionClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     linkSupport?: boolean;
 ;;; | }
 
 (define-class type-definition-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
   (:link-support (boolean :optional t)))
 
-;;; ? interface TypeDefinitionOptions extends WorkDoneProgressOptions {
+;;; | interface TypeDefinitionOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface TypeDefinitionRegistrationOptions extends
+;;; | interface TypeDefinitionRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, TypeDefinitionOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface TypeDefinitionParams extends TextDocumentPositionParams,
+;;; | interface TypeDefinitionParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
-;;; | }
-
-;;; | interface ImplementationClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     linkSupport?: boolean;
 ;;; | }
 
 (define-class implementation-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
   (:link-support (boolean :optional t)))
 
-;;; ? interface ImplementationOptions extends WorkDoneProgressOptions {
+;;; | interface ImplementationOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface ImplementationRegistrationOptions extends
+;;; | interface ImplementationRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, ImplementationOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface ImplementationParams extends TextDocumentPositionParams,
+;;; | interface ImplementationParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
-;;; | }
-
-;;; | interface ReferenceClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
 (define-class reference-client-capabilities ()
   (:dynamic-registration (boolean :optional t)))
 
-;;; ? interface ReferenceOptions extends WorkDoneProgressOptions {
+;;; | interface ReferenceOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface ReferenceRegistrationOptions extends
+;;; | interface ReferenceRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, ReferenceOptions {
 ;;; | }
 
-;;; ? interface ReferenceParams extends TextDocumentPositionParams,
+;;; | interface ReferenceParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; |     context: ReferenceContext;
 ;;; | }
 
-;;; ? interface ReferenceContext {
+;;; | interface ReferenceContext {
 ;;; |     includeDeclaration: boolean;
 ;;; | }
 
-;;; ? interface CallHierarchyClientCapabilities {
+;;; | interface CallHierarchyClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface CallHierarchyOptions extends WorkDoneProgressOptions {
+;;; | interface CallHierarchyOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface CallHierarchyRegistrationOptions extends
+;;; | interface CallHierarchyRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, CallHierarchyOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface CallHierarchyPrepareParams extends TextDocumentPositionParams,
+;;; | interface CallHierarchyPrepareParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams {
 ;;; | }
 
-;;; ? interface CallHierarchyItem {
+;;; | interface CallHierarchyItem {
 ;;; |     name: string;
 ;;; |     kind: SymbolKind;
 ;;; |     tags?: SymbolTag[];
@@ -880,43 +639,43 @@
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; ? interface CallHierarchyIncomingCallsParams extends
+;;; | interface CallHierarchyIncomingCallsParams extends
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; |     item: CallHierarchyItem;
 ;;; | }
 
-;;; ? interface CallHierarchyIncomingCall {
+;;; | interface CallHierarchyIncomingCall {
 ;;; |     from: CallHierarchyItem;
 ;;; |     fromRanges: Range[];
 ;;; | }
 
-;;; ? interface CallHierarchyOutgoingCallsParams extends
+;;; | interface CallHierarchyOutgoingCallsParams extends
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; |     item: CallHierarchyItem;
 ;;; | }
 
-;;; ? interface CallHierarchyOutgoingCall {
+;;; | interface CallHierarchyOutgoingCall {
 ;;; |     to: CallHierarchyItem;
 ;;; |     fromRanges: Range[];
 ;;; | }
 
-;;; ? type TypeHierarchyClientCapabilities = {
+;;; | type TypeHierarchyClientCapabilities = {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | };
 
-;;; ? interface TypeHierarchyOptions extends WorkDoneProgressOptions {
+;;; | interface TypeHierarchyOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface TypeHierarchyRegistrationOptions extends
+;;; | interface TypeHierarchyRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, TypeHierarchyOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface TypeHierarchyPrepareParams extends TextDocumentPositionParams,
+;;; | interface TypeHierarchyPrepareParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams {
 ;;; | }
 
-;;; ? interface TypeHierarchyItem {
+;;; | interface TypeHierarchyItem {
 ;;; |     name: string;
 ;;; |     kind: SymbolKind;
 ;;; |     tags?: SymbolTag[];
@@ -927,132 +686,115 @@
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; ? interface TypeHierarchySupertypesParams extends
+;;; | interface TypeHierarchySupertypesParams extends
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; |     item: TypeHierarchyItem;
 ;;; | }
 
-;;; ? interface TypeHierarchySubtypesParams extends
+;;; | interface TypeHierarchySubtypesParams extends
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; |     item: TypeHierarchyItem;
-;;; | }
-
-;;; | interface DocumentHighlightClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
 (define-class document-highlight-client-capabilities ()
   (:dynamic-registration (boolean :optional t)))
 
-;;; ? interface DocumentHighlightOptions extends WorkDoneProgressOptions {
+;;; | interface DocumentHighlightOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface DocumentHighlightRegistrationOptions extends
+;;; | interface DocumentHighlightRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DocumentHighlightOptions {
 ;;; | }
 
-;;; ? interface DocumentHighlightParams extends TextDocumentPositionParams,
+;;; | interface DocumentHighlightParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; | }
 
-;;; ? interface DocumentHighlight {
+;;; | interface DocumentHighlight {
 ;;; |     range: Range;
 ;;; |     kind?: DocumentHighlightKind;
 ;;; | }
 
-;;; ? namespace DocumentHighlightKind {
+;;; | namespace DocumentHighlightKind {
 ;;; |     Text = 1;
 ;;; |     Read = 2;
 ;;; |     Write = 3;
 ;;; | }
 
-;;; ? type DocumentHighlightKind = 1 | 2 | 3;
+;;; | type DocumentHighlightKind = 1 | 2 | 3;
 
-;;; ? interface DocumentLinkClientCapabilities {
+;;; | interface DocumentLinkClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     tooltipSupport?: boolean;
-;;; | }
-
-;;; | interface DocumentLinkOptions extends WorkDoneProgressOptions {
-;;; |     resolveProvider?: boolean;
 ;;; | }
 
 (define-class document-link-options (work-done-progress-options)
   (:resolve-provider (boolean :optional t)))
 
-;;; ? interface DocumentLinkRegistrationOptions extends
+;;; | interface DocumentLinkRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DocumentLinkOptions {
 ;;; | }
 
-;;; ? interface DocumentLinkParams extends WorkDoneProgressParams,
+;;; | interface DocumentLinkParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; | }
 
-;;; ? interface DocumentLink {
+;;; | interface DocumentLink {
 ;;; |     range: Range;
 ;;; |     target?: URI;
 ;;; |     tooltip?: string;
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; | interface HoverClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     contentFormat?: MarkupKind[];
-;;; | }
-
 (define-class hover-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
   (:content-format (markup-kind :vector t :optional t)))
 
-;;; ? interface HoverOptions extends WorkDoneProgressOptions {
+;;; | interface HoverOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface HoverRegistrationOptions
+;;; | interface HoverRegistrationOptions
 ;;; |     extends TextDocumentRegistrationOptions, HoverOptions {
 ;;; | }
 
-;;; ? interface HoverParams extends TextDocumentPositionParams,
+;;; | interface HoverParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams {
 ;;; | }
 
-;;; ? interface Hover {
+;;; | interface Hover {
 ;;; |     contents: MarkedString | MarkedString[] | MarkupContent;
 ;;; |     range?: Range;
 ;;; | }
 
-;;; ? type MarkedString = string | { language: string; value: string };
+;;; | type MarkedString = string | { language: string; value: string };
 
-;;; ? interface CodeLensClientCapabilities {
+;;; | interface CodeLensClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface CodeLensOptions extends WorkDoneProgressOptions {
+;;; | interface CodeLensOptions extends WorkDoneProgressOptions {
 ;;; |     resolveProvider?: boolean;
 ;;; | }
 
-;;; ? interface CodeLensRegistrationOptions extends
+;;; | interface CodeLensRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, CodeLensOptions {
 ;;; | }
 
-;;; ? interface CodeLensParams extends WorkDoneProgressParams, PartialResultParams {
+;;; | interface CodeLensParams extends WorkDoneProgressParams, PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; | }
 
-;;; ? interface CodeLens {
+;;; | interface CodeLens {
 ;;; |     range: Range;
 ;;; |     command?: Command;
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; ? interface CodeLensWorkspaceClientCapabilities {
-;;; |     refreshSupport?: boolean;
-;;; | }
-
 (define-class code-lens-workspace-client-capabilities ()
   (:refresh-support (boolean :optional t)))
 
-;;; ? interface FoldingRangeClientCapabilities {
+;;; | interface FoldingRangeClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     rangeLimit?: uinteger;
 ;;; |     lineFoldingOnly?: boolean;
@@ -1064,28 +806,28 @@
 ;;; |     };
 ;;; | }
 
-;;; ? interface FoldingRangeOptions extends WorkDoneProgressOptions {
+;;; | interface FoldingRangeOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface FoldingRangeRegistrationOptions extends
+;;; | interface FoldingRangeRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, FoldingRangeOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface FoldingRangeParams extends WorkDoneProgressParams,
+;;; | interface FoldingRangeParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; | }
 
-;;; ? namespace FoldingRangeKind {
+;;; | namespace FoldingRangeKind {
 ;;; |     Comment = 'comment';
 ;;; |     Imports = 'imports';
 ;;; |     Region = 'region';
 ;;; | }
 
-;;; ? type FoldingRangeKind = string;
+;;; | type FoldingRangeKind = string;
 
-;;; ? interface FoldingRange {
+;;; | interface FoldingRange {
 ;;; |     startLine: uinteger;
 ;;; |     startCharacter?: uinteger;
 ;;; |     endLine: uinteger;
@@ -1094,77 +836,39 @@
 ;;; |     collapsedText?: string;
 ;;; | }
 
-;;; ? interface SelectionRangeClientCapabilities {
+;;; | interface SelectionRangeClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface SelectionRangeOptions extends WorkDoneProgressOptions {
+;;; | interface SelectionRangeOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface SelectionRangeRegistrationOptions extends
+;;; | interface SelectionRangeRegistrationOptions extends
 ;;; |     SelectionRangeOptions, TextDocumentRegistrationOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface SelectionRangeParams extends WorkDoneProgressParams,
+;;; | interface SelectionRangeParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     positions: Position[];
 ;;; | }
 
-;;; ? interface SelectionRange {
+;;; | interface SelectionRange {
 ;;; |     range: Range;
 ;;; |     parent?: SelectionRange;
-;;; | }
-
-;;; | interface DocumentSymbolOptions extends WorkDoneProgressOptions {
-;;; |     label?: string;
 ;;; | }
 
 (define-class document-symbol-options (work-done-progress-options)
   (:label (string :optional t)))
 
-;;; ? interface DocumentSymbolRegistrationOptions extends
+;;; | interface DocumentSymbolRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DocumentSymbolOptions {
 ;;; | }
 
-;;; ? interface DocumentSymbolParams extends WorkDoneProgressParams,
-;;; |     PartialResultParams {
-;;; |     textDocument: TextDocumentIdentifier;
-;;; | }
-
-;;; | namespace SymbolKind {
-;;; |     File = 1;
-;;; |     Module = 2;
-;;; |     Namespace = 3;
-;;; |     Package = 4;
-;;; |     Class = 5;
-;;; |     Method = 6;
-;;; |     Property = 7;
-;;; |     Field = 8;
-;;; |     Constructor = 9;
-;;; |     Enum = 10;
-;;; |     Interface = 11;
-;;; |     Function = 12;
-;;; |     Variable = 13;
-;;; |     Constant = 14;
-;;; |     String = 15;
-;;; |     Number = 16;
-;;; |     Boolean = 17;
-;;; |     Array = 18;
-;;; |     Object = 19;
-;;; |     Key = 20;
-;;; |     Null = 21;
-;;; |     EnumMember = 22;
-;;; |     Struct = 23;
-;;; |     Event = 24;
-;;; |     Operator = 25;
-;;; |     TypeParameter = 26;
-;;; | }
-
-;;; | type SymbolKind = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | \
-;;; |                   12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | \
-;;; |                   21 | 22 | 23 | 24 | 25 | 26;
+(define-class document-symbol-params (work-done-progress-params
+                                      partial-result-params)
+  (:text-document text-document-identifier))
 
 (define-enum symbol-kind ()
   (:file 1)
@@ -1194,25 +898,8 @@
   (:operator 25)
   (:type-parameter 26))
 
-;;; | interface DocumentSymbolClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     symbolKind?: {
-;;; |         valueSet?: SymbolKind[];
-;;; |     };
-;;; |     hierarchicalDocumentSymbolSupport?: boolean;
-;;; |     tagSupport?: {
-;;; |         valueSet: SymbolTag[];
-;;; |     };
-;;; |     labelSupport?: boolean;
-;;; | }
-
 (define-class symbol-kind-value-set ()
   (:value-set (symbol-kind :vector t)))
-
-;;; | namespace SymbolTag {
-;;; |     Deprecated: 1 = 1;
-;;; | }
-;;; | type SymbolTag = 1;
 
 (define-enum symbol-tag ()
   (:deprecated 1))
@@ -1227,18 +914,17 @@
   (:tag-support (symbol-tag-value-set :optional t))
   (:label-support (boolean :optional t)))
 
-;;; ? interface DocumentSymbol {
-;;; |     name: string;
-;;; |     detail?: string;
-;;; |     kind: SymbolKind;
-;;; |     tags?: SymbolTag[];
-;;; |     deprecated?: boolean;
-;;; |     range: Range;
-;;; |     selectionRange: Range;
-;;; |     children?: DocumentSymbol[];
-;;; | }
+(define-class document-symbol ()
+  (:name string)
+  (:detail (string :optional T))
+  (:kind symbol-kind)
+  (:tags (symbol-tag :optional t :vector t))
+  (:deprecated (boolean :optional t))
+  (:range range)
+  (:selection-range range)
+  (:children (document-symbol :optional t :vector t)))
 
-;;; ? interface SymbolInformation {
+;;; | interface SymbolInformation {
 ;;; |     name: string;
 ;;; |     kind: SymbolKind;
 ;;; |     tags?: SymbolTag[];
@@ -1247,7 +933,7 @@
 ;;; |     containerName?: string;
 ;;; | }
 
-;;; ? enum SemanticTokenTypes {
+;;; | enum SemanticTokenTypes {
 ;;; |     namespace = 'namespace',
 ;;; |     type = 'type',
 ;;; |     class = 'class',
@@ -1273,7 +959,7 @@
 ;;; |     decorator = 'decorator'
 ;;; | }
 
-;;; ? enum SemanticTokenModifiers {
+;;; | enum SemanticTokenModifiers {
 ;;; |     declaration = 'declaration',
 ;;; |     definition = 'definition',
 ;;; |     readonly = 'readonly',
@@ -1286,22 +972,17 @@
 ;;; |     defaultLibrary = 'defaultLibrary'
 ;;; | }
 
-;;; ? namespace TokenFormat {
+;;; | namespace TokenFormat {
 ;;; |     Relative: 'relative' = 'relative';
 ;;; | }
 
-;;; ? type TokenFormat = 'relative';
-
-;;; | interface SemanticTokensLegend {
-;;; |     tokenTypes: string[];
-;;; |     tokenModifiers: string[];
-;;; | }
+;;; | type TokenFormat = 'relative';
 
 (define-class semantic-tokens-legend ()
   (:token-types (string :vector t))
   (:token-modifiers (string :vector t)))
 
-;;; ? interface SemanticTokensClientCapabilities {
+;;; | interface SemanticTokensClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     requests: {
 ;;; |         range?: boolean | {
@@ -1319,15 +1000,6 @@
 ;;; |     augmentsSyntaxTokens?: boolean;
 ;;; | }
 
-;;; | interface SemanticTokensOptions extends WorkDoneProgressOptions {
-;;; |     legend: SemanticTokensLegend;
-;;; |     range?: boolean | {
-;;; |     };
-;;; |     full?: boolean | {
-;;; |         delta?: boolean;
-;;; |     };
-;;; | }
-
 (define-class delta ()
   (:delta (boolean :optional t)))
 
@@ -1342,58 +1014,42 @@
   (:range (range-option :optional t))
   (:full (full-option :optional t)))
 
-;;; | interface SemanticTokensRegistrationOptions extends
-;;; |     TextDocumentRegistrationOptions, SemanticTokensOptions,
-;;; |     StaticRegistrationOptions {
-;;; | }
-
 (define-class semantic-tokens-registration-options (text-document-registration-options
                                                       semantic-tokens-options
                                                       static-registration-options))
 
-;;; ? interface SemanticTokensParams extends WorkDoneProgressParams,
+;;; | interface SemanticTokensParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
-;;; | }
-
-;;; | interface SemanticTokens {
-;;; |     resultId?: string;
-;;; |     data: uinteger[];
 ;;; | }
 
 (define-class semantic-tokens ()
   (:result-id (string :optional t))
   (:data (uinteger :vector t)))
 
-;;; ? interface SemanticTokensPartialResult {
+;;; | interface SemanticTokensPartialResult {
 ;;; |     data: uinteger[];
 ;;; | }
 
-;;; ? interface SemanticTokensDeltaParams extends WorkDoneProgressParams,
+;;; | interface SemanticTokensDeltaParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     previousResultId: string;
 ;;; | }
 
-;;; ? interface SemanticTokensDelta {
+;;; | interface SemanticTokensDelta {
 ;;; |     readonly resultId?: string;
 ;;; |     edits: SemanticTokensEdit[];
 ;;; | }
 
-;;; ? interface SemanticTokensEdit {
+;;; | interface SemanticTokensEdit {
 ;;; |     start: uinteger;
 ;;; |     deleteCount: uinteger;
 ;;; |     data?: uinteger[];
 ;;; | }
 
-;;; ? interface SemanticTokensDeltaPartialResult {
+;;; | interface SemanticTokensDeltaPartialResult {
 ;;; |     edits: SemanticTokensEdit[];
-;;; | }
-
-;;; | interface SemanticTokensRangeParams extends WorkDoneProgressParams,
-;;; |     PartialResultParams {
-;;; |     textDocument: TextDocumentIdentifier;
-;;; |     range: Range;
 ;;; | }
 
 (define-class semantic-tokens-range-params (work-done-progress-params
@@ -1401,37 +1057,30 @@
   (:text-document text-document-identifier)
   (:range range))
 
-;;; | interface SemanticTokensWorkspaceClientCapabilities {
-;;; |     refreshSupport?: boolean;
-;;; | }
-
 (define-class semantic-tokens-workspace-client-capabilities ()
   (:refresh-support (boolean :optional t)))
 
-;;; ? interface InlayHintClientCapabilities {
+;;; | interface InlayHintClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     resolveSupport?: {
 ;;; |         properties: string[];
 ;;; |     };
 ;;; | }
 
-(define-class resolve-support-properties ()
-  (:properties (string :vector t)))
-
-;;; ? interface InlayHintOptions extends WorkDoneProgressOptions {
+;;; | interface InlayHintOptions extends WorkDoneProgressOptions {
 ;;; |     resolveProvider?: boolean;
 ;;; | }
 
-;;; ? interface InlayHintRegistrationOptions extends InlayHintOptions,
+;;; | interface InlayHintRegistrationOptions extends InlayHintOptions,
 ;;; |     TextDocumentRegistrationOptions, StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface InlayHintParams extends WorkDoneProgressParams {
+;;; | interface InlayHintParams extends WorkDoneProgressParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     range: Range;
 ;;; | }
 
-;;; ? interface InlayHint {
+;;; | interface InlayHint {
 ;;; |     position: Position;
 ;;; |     label: string | InlayHintLabelPart[];
 ;;; |     kind?: InlayHintKind;
@@ -1442,85 +1091,85 @@
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; ? interface InlayHintLabelPart {
+;;; | interface InlayHintLabelPart {
 ;;; |     value: string;
 ;;; |     tooltip?: string | MarkupContent;
 ;;; |     location?: Location;
 ;;; |     command?: Command;
 ;;; | }
 
-;;; ? namespace InlayHintKind {
+;;; | namespace InlayHintKind {
 ;;; |     Type = 1;
 ;;; |     Parameter = 2;
 ;;; | }
 
-;;; ? type InlayHintKind = 1 | 2;
+;;; | type InlayHintKind = 1 | 2;
 
-;;; ? interface InlayHintWorkspaceClientCapabilities {
+;;; | interface InlayHintWorkspaceClientCapabilities {
 ;;; |     refreshSupport?: boolean;
 ;;; | }
 
-;;; ? interface InlineValueClientCapabilities {
+;;; | interface InlineValueClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface InlineValueOptions extends WorkDoneProgressOptions {
+;;; | interface InlineValueOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface InlineValueRegistrationOptions extends InlineValueOptions,
+;;; | interface InlineValueRegistrationOptions extends InlineValueOptions,
 ;;; |     TextDocumentRegistrationOptions, StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface InlineValueParams extends WorkDoneProgressParams {
+;;; | interface InlineValueParams extends WorkDoneProgressParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     range: Range;
 ;;; |     context: InlineValueContext;
 ;;; | }
 
-;;; ? interface InlineValueContext {
+;;; | interface InlineValueContext {
 ;;; |     frameId: integer;
 ;;; |     stoppedLocation: Range;
 ;;; | }
 
-;;; ? interface InlineValueText {
+;;; | interface InlineValueText {
 ;;; |     range: Range;
 ;;; |     text: string;
 ;;; | }
 
-;;; ? interface InlineValueVariableLookup {
+;;; | interface InlineValueVariableLookup {
 ;;; |     range: Range;
 ;;; |     variableName?: string;
 ;;; |     caseSensitiveLookup: boolean;
 ;;; | }
 
-;;; ? interface InlineValueEvaluatableExpression {
+;;; | interface InlineValueEvaluatableExpression {
 ;;; |     range: Range;
 ;;; |     expression?: string;
 ;;; | }
 
-;;; ? type InlineValue = InlineValueText | InlineValueVariableLookup
+;;; | type InlineValue = InlineValueText | InlineValueVariableLookup
 ;;; |     | InlineValueEvaluatableExpression;
 
-;;; ? interface InlineValueWorkspaceClientCapabilities {
+;;; | interface InlineValueWorkspaceClientCapabilities {
 ;;; |     refreshSupport?: boolean;
 ;;; | }
 
-;;; ? interface MonikerClientCapabilities {
+;;; | interface MonikerClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface MonikerOptions extends WorkDoneProgressOptions {
+;;; | interface MonikerOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface MonikerRegistrationOptions extends
+;;; | interface MonikerRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, MonikerOptions {
 ;;; | }
 
-;;; ? interface MonikerParams extends TextDocumentPositionParams,
+;;; | interface MonikerParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; | }
 
-;;; ? enum UniquenessLevel {
+;;; | enum UniquenessLevel {
 ;;; |     document = 'document',
 ;;; |     project = 'project',
 ;;; |     group = 'group',
@@ -1528,13 +1177,13 @@
 ;;; |     global = 'global'
 ;;; | }
 
-;;; ? enum MonikerKind {
+;;; | enum MonikerKind {
 ;;; |     import = 'import',
 ;;; |     = 'export',
 ;;; |     local = 'local'
 ;;; | }
 
-;;; ? interface Moniker {
+;;; | interface Moniker {
 ;;; |     scheme: string;
 ;;; |     identifier: string;
 ;;; |     unique: UniquenessLevel;
@@ -1559,29 +1208,29 @@
   (:resolve-provider (boolean :optional t))
   (:completion-item (completion-item-options :optional t)))
 
-;;; ? interface CompletionRegistrationOptions
+;;; | interface CompletionRegistrationOptions
 ;;; |     extends TextDocumentRegistrationOptions, CompletionOptions {
 ;;; | }
 
-;;; ? interface CompletionParams extends TextDocumentPositionParams,
+;;; | interface CompletionParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams, PartialResultParams {
 ;;; |     context?: CompletionContext;
 ;;; | }
 
-;;; ? namespace CompletionTriggerKind {
+;;; | namespace CompletionTriggerKind {
 ;;; |     Invoked: 1 = 1;
 ;;; |     TriggerCharacter: 2 = 2;
 ;;; |     TriggerForIncompleteCompletions: 3 = 3;
 ;;; | }
 
-;;; ? type CompletionTriggerKind = 1 | 2 | 3;
+;;; | type CompletionTriggerKind = 1 | 2 | 3;
 
-;;; ? interface CompletionContext {
+;;; | interface CompletionContext {
 ;;; |     triggerKind: CompletionTriggerKind;
 ;;; |     triggerCharacter?: string;
 ;;; | }
 
-;;; ? interface CompletionList {
+;;; | interface CompletionList {
 ;;; |     isIncomplete: boolean;
 ;;; |     itemDefaults?: {
 ;;; |         commitCharacters?: string[];
@@ -1596,12 +1245,12 @@
 ;;; |     items: CompletionItem[];
 ;;; | }
 
-;;; ? namespace InsertTextFormat {
+;;; | namespace InsertTextFormat {
 ;;; |     PlainText = 1;
 ;;; |     Snippet = 2;
 ;;; | }
 
-;;; ? type InsertTextFormat = 1 | 2;
+;;; | type InsertTextFormat = 1 | 2;
 
 ;;; | namespace CompletionItemTag {
 ;;; |     Deprecated = 1;
@@ -1611,7 +1260,7 @@
 (define-enum completion-item-tag ()
   (:deprecated 1))
 
-;;; ? interface InsertReplaceEdit {
+;;; | interface InsertReplaceEdit {
 ;;; |     newText: string;
 ;;; |     insert: Range;
 ;;; |     replace: Range;
@@ -1627,12 +1276,12 @@
   (:as-is 1)
   (:adjust-indentation 2))
 
-;;; ? interface CompletionItemLabelDetails {
+;;; | interface CompletionItemLabelDetails {
 ;;; |     detail?: string;
 ;;; |     description?: string;
 ;;; | }
 
-;;; ? interface CompletionItem {
+;;; | interface CompletionItem {
 ;;; |     label: string;
 ;;; |     labelDetails?: CompletionItemLabelDetails;
 ;;; |     kind?: CompletionItemKind;
@@ -1654,7 +1303,7 @@
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; ? interface PublishDiagnosticsClientCapabilities {
+;;; | interface PublishDiagnosticsClientCapabilities {
 ;;; |     relatedInformation?: boolean;
 ;;; |     tagSupport?: {
 ;;; |         valueSet: DiagnosticTag[];
@@ -1664,7 +1313,7 @@
 ;;; |     dataSupport?: boolean;
 ;;; | }
 
-;;; ? interface PublishDiagnosticsParams {
+;;; | interface PublishDiagnosticsParams {
 ;;; |     uri: DocumentUri;
 ;;; |     version?: integer;
 ;;; |     diagnostics: Diagnostic[];
@@ -1675,51 +1324,51 @@
   (:version (integer :optional t))
   (:diagnostics (diagnostic :vector t)))
 
-;;; ? interface DiagnosticClientCapabilities {
+;;; | interface DiagnosticClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     relatedDocumentSupport?: boolean;
 ;;; | }
 
-;;; ? interface DiagnosticOptions extends WorkDoneProgressOptions {
+;;; | interface DiagnosticOptions extends WorkDoneProgressOptions {
 ;;; |     identifier?: string;
 ;;; |     interFileDependencies: boolean;
 ;;; |     workspaceDiagnostics: boolean;
 ;;; | }
 
-;;; ? interface DiagnosticRegistrationOptions extends
+;;; | interface DiagnosticRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DiagnosticOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface DocumentDiagnosticParams extends WorkDoneProgressParams,
+;;; | interface DocumentDiagnosticParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     identifier?: string;
 ;;; |     previousResultId?: string;
 ;;; | }
 
-;;; ? type DocumentDiagnosticReport = RelatedFullDocumentDiagnosticReport
+;;; | type DocumentDiagnosticReport = RelatedFullDocumentDiagnosticReport
 ;;; |     | RelatedUnchangedDocumentDiagnosticReport;
 
-;;; ? namespace DocumentDiagnosticReportKind {
+;;; | namespace DocumentDiagnosticReportKind {
 ;;; |     Full = 'full';
 ;;; |     Unchanged = 'unchanged';
 ;;; | }
 
-;;; ? type DocumentDiagnosticReportKind = 'full' | 'unchanged';
+;;; | type DocumentDiagnosticReportKind = 'full' | 'unchanged';
 
-;;; ? interface FullDocumentDiagnosticReport {
+;;; | interface FullDocumentDiagnosticReport {
 ;;; |     kind: DocumentDiagnosticReportKind.Full;
 ;;; |     resultId?: string;
 ;;; |     items: Diagnostic[];
 ;;; | }
 
-;;; ? interface UnchangedDocumentDiagnosticReport {
+;;; | interface UnchangedDocumentDiagnosticReport {
 ;;; |     kind: DocumentDiagnosticReportKind.Unchanged;
 ;;; |     resultId: string;
 ;;; | }
 
-;;; ? interface RelatedFullDocumentDiagnosticReport extends
+;;; | interface RelatedFullDocumentDiagnosticReport extends
 ;;; |     FullDocumentDiagnosticReport {
 ;;; |     relatedDocuments?: {
 ;;; |         [uri: string :
@@ -1727,7 +1376,7 @@
 ;;; |     };
 ;;; | }
 
-;;; ? interface RelatedUnchangedDocumentDiagnosticReport extends
+;;; | interface RelatedUnchangedDocumentDiagnosticReport extends
 ;;; |     UnchangedDocumentDiagnosticReport {
 ;;; |     relatedDocuments?: {
 ;;; |         [uri: string :
@@ -1735,57 +1384,57 @@
 ;;; |     };
 ;;; | }
 
-;;; ? interface DocumentDiagnosticReportPartialResult {
+;;; | interface DocumentDiagnosticReportPartialResult {
 ;;; |     relatedDocuments: {
 ;;; |         [uri: string :
 ;;; |         FullDocumentDiagnosticReport | UnchangedDocumentDiagnosticReport;
 ;;; |     };
 ;;; | }
 
-;;; ? interface DiagnosticServerCancellationData {
+;;; | interface DiagnosticServerCancellationData {
 ;;; |     retriggerRequest: boolean;
 ;;; | }
 
-;;; ? interface WorkspaceDiagnosticParams extends WorkDoneProgressParams,
+;;; | interface WorkspaceDiagnosticParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     identifier?: string;
 ;;; |     previousResultIds: PreviousResultId[];
 ;;; | }
 
-;;; ? interface PreviousResultId {
+;;; | interface PreviousResultId {
 ;;; |     uri: DocumentUri;
 ;;; |     value: string;
 ;;; | }
 
-;;; ? interface WorkspaceDiagnosticReport {
+;;; | interface WorkspaceDiagnosticReport {
 ;;; |     items: WorkspaceDocumentDiagnosticReport[];
 ;;; | }
 
-;;; ? interface WorkspaceFullDocumentDiagnosticReport extends
+;;; | interface WorkspaceFullDocumentDiagnosticReport extends
 ;;; |     FullDocumentDiagnosticReport {
 ;;; |     uri: DocumentUri;
 ;;; |     version: integer | null;
 ;;; | }
 
-;;; ? interface WorkspaceUnchangedDocumentDiagnosticReport extends
+;;; | interface WorkspaceUnchangedDocumentDiagnosticReport extends
 ;;; |     UnchangedDocumentDiagnosticReport {
 ;;; |     uri: DocumentUri;
 ;;; |     version: integer | null;
 ;;; | };
 
-;;; ? type WorkspaceDocumentDiagnosticReport =
+;;; | type WorkspaceDocumentDiagnosticReport =
 ;;; |     WorkspaceFullDocumentDiagnosticReport
 ;;; |     | WorkspaceUnchangedDocumentDiagnosticReport;
 
-;;; ? interface WorkspaceDiagnosticReportPartialResult {
+;;; | interface WorkspaceDiagnosticReportPartialResult {
 ;;; |     items: WorkspaceDocumentDiagnosticReport[];
 ;;; | }
 
-;;; ? interface DiagnosticWorkspaceClientCapabilities {
+;;; | interface DiagnosticWorkspaceClientCapabilities {
 ;;; |     refreshSupport?: boolean;
 ;;; | }
 
-;;; ? interface SignatureHelpClientCapabilities {
+;;; | interface SignatureHelpClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     signatureInformation?: {
 ;;; |         documentationFormat?: MarkupKind[];
@@ -1802,54 +1451,54 @@
   #++ (:signature-information (signature-information-options :optional t))
   (:context-support (boolean :optional t)))
 
-;;; ? interface SignatureHelpOptions extends WorkDoneProgressOptions {
+;;; | interface SignatureHelpOptions extends WorkDoneProgressOptions {
 ;;; |     triggerCharacters?: string[];
 ;;; |     retriggerCharacters?: string[];
 ;;; | }
 
-;;; ? interface SignatureHelpRegistrationOptions
+;;; | interface SignatureHelpRegistrationOptions
 ;;; |     extends TextDocumentRegistrationOptions, SignatureHelpOptions {
 ;;; | }
 
-;;; ? interface SignatureHelpParams extends TextDocumentPositionParams,
+;;; | interface SignatureHelpParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams {
 ;;; |     context?: SignatureHelpContext;
 ;;; | }
 
-;;; ? namespace SignatureHelpTriggerKind {
+;;; | namespace SignatureHelpTriggerKind {
 ;;; |     Invoked: 1 = 1;
 ;;; |     TriggerCharacter: 2 = 2;
 ;;; |     ContentChange: 3 = 3;
 ;;; | }
 
-;;; ? type SignatureHelpTriggerKind = 1 | 2 | 3;
+;;; | type SignatureHelpTriggerKind = 1 | 2 | 3;
 
-;;; ? interface SignatureHelpContext {
+;;; | interface SignatureHelpContext {
 ;;; |     triggerKind: SignatureHelpTriggerKind;
 ;;; |     triggerCharacter?: string;
 ;;; |     isRetrigger: boolean;
 ;;; |     activeSignatureHelp?: SignatureHelp;
 ;;; | }
 
-;;; ? interface SignatureHelp {
+;;; | interface SignatureHelp {
 ;;; |     signatures: SignatureInformation[];
 ;;; |     activeSignature?: uinteger;
 ;;; |     activeParameter?: uinteger;
 ;;; | }
 
-;;; ? interface SignatureInformation {
+;;; | interface SignatureInformation {
 ;;; |     label: string;
 ;;; |     documentation?: string | MarkupContent;
 ;;; |     parameters?: ParameterInformation[];
 ;;; |     activeParameter?: uinteger;
 ;;; | }
 
-;;; ? interface ParameterInformation {
+;;; | interface ParameterInformation {
 ;;; |     label: string | [uinteger, uinteger];
 ;;; |     documentation?: string | MarkupContent;
 ;;; | }
 
-;;; ? interface CodeActionClientCapabilities {
+;;; | interface CodeActionClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     codeActionLiteralSupport?: {
 ;;; |         codeActionKind: {
@@ -1865,25 +1514,25 @@
 ;;; |     honorsChangeAnnotations?: boolean;
 ;;; | }
 
-;;; ? interface CodeActionOptions extends WorkDoneProgressOptions {
+;;; | interface CodeActionOptions extends WorkDoneProgressOptions {
 ;;; |     codeActionKinds?: CodeActionKind[];
 ;;; |     resolveProvider?: boolean;
 ;;; | }
 
-;;; ? interface CodeActionRegistrationOptions extends
+;;; | interface CodeActionRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, CodeActionOptions {
 ;;; | }
 
-;;; ? interface CodeActionParams extends WorkDoneProgressParams,
+;;; | interface CodeActionParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     range: Range;
 ;;; |     context: CodeActionContext;
 ;;; | }
 
-;;; ? type CodeActionKind = string;
+;;; | type CodeActionKind = string;
 
-;;; ? namespace CodeActionKind {
+;;; | namespace CodeActionKind {
 ;;; |     Empty: CodeActionKind = '';
 ;;; |     QuickFix: CodeActionKind = 'quickfix';
 ;;; |     Refactor: CodeActionKind = 'refactor';
@@ -1896,20 +1545,20 @@
 ;;; |     SourceFixAll: CodeActionKind = 'source.fixAll';
 ;;; | }
 
-;;; ? interface CodeActionContext {
+;;; | interface CodeActionContext {
 ;;; |     diagnostics: Diagnostic[];
 ;;; |     only?: CodeActionKind[];
 ;;; |     triggerKind?: CodeActionTriggerKind;
 ;;; | }
 
-;;; ? namespace CodeActionTriggerKind {
+;;; | namespace CodeActionTriggerKind {
 ;;; |     Invoked: 1 = 1;
 ;;; |     Automatic: 2 = 2;
 ;;; | }
 
-;;; ? type CodeActionTriggerKind = 1 | 2;
+;;; | type CodeActionTriggerKind = 1 | 2;
 
-;;; ? interface CodeAction {
+;;; | interface CodeAction {
 ;;; |     title: string;
 ;;; |     kind?: CodeActionKind;
 ;;; |     diagnostics?: Diagnostic[];
@@ -1922,49 +1571,49 @@
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; ? interface DocumentColorClientCapabilities {
+;;; | interface DocumentColorClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface DocumentColorOptions extends WorkDoneProgressOptions {
+;;; | interface DocumentColorOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface DocumentColorRegistrationOptions extends
+;;; | interface DocumentColorRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, StaticRegistrationOptions,
 ;;; |     DocumentColorOptions {
 ;;; | }
 
-;;; ? interface DocumentColorParams extends WorkDoneProgressParams,
+;;; | interface DocumentColorParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; | }
 
-;;; ? interface ColorInformation {
+;;; | interface ColorInformation {
 ;;; |     range: Range;
 ;;; |     color: Color;
 ;;; | }
 
-;;; ? interface Color {
+;;; | interface Color {
 ;;; |     readonly red: decimal;
 ;;; |     readonly green: decimal;
 ;;; |     readonly blue: decimal;
 ;;; |     readonly alpha: decimal;
 ;;; | }
 
-;;; ? interface ColorPresentationParams extends WorkDoneProgressParams,
+;;; | interface ColorPresentationParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     color: Color;
 ;;; |     range: Range;
 ;;; | }
 
-;;; ? interface ColorPresentation {
+;;; | interface ColorPresentation {
 ;;; |     label: string;
 ;;; |     textEdit?: TextEdit;
 ;;; |     additionalTextEdits?: TextEdit[];
 ;;; | }
 
-;;; ? interface DocumentFormattingClientCapabilities {
+;;; | interface DocumentFormattingClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
@@ -1973,16 +1622,16 @@
 
 (define-class document-formatting-options (work-done-progress-options))
 
-;;; ? interface DocumentFormattingRegistrationOptions extends
+;;; | interface DocumentFormattingRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DocumentFormattingOptions {
 ;;; | }
 
-;;; ? interface DocumentFormattingParams extends WorkDoneProgressParams {
+;;; | interface DocumentFormattingParams extends WorkDoneProgressParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     options: FormattingOptions;
 ;;; | }
 
-;;; ? interface FormattingOptions {
+;;; | interface FormattingOptions {
 ;;; |     tabSize: uinteger;
 ;;; |     insertSpaces: boolean;
 ;;; |     trimTrailingWhitespace?: boolean;
@@ -1991,109 +1640,99 @@
 ;;; |     [key: string]: boolean | integer | string;
 ;;; | }
 
-;;; ? interface DocumentRangeFormattingClientCapabilities {
+;;; | interface DocumentRangeFormattingClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface DocumentRangeFormattingOptions extends
+;;; | interface DocumentRangeFormattingOptions extends
 ;;; |     WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface DocumentRangeFormattingRegistrationOptions extends
+;;; | interface DocumentRangeFormattingRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DocumentRangeFormattingOptions {
 ;;; | }
 
-;;; ? interface DocumentRangeFormattingParams extends WorkDoneProgressParams {
+;;; | interface DocumentRangeFormattingParams extends WorkDoneProgressParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     range: Range;
 ;;; |     options: FormattingOptions;
 ;;; | }
 
-;;; ? interface DocumentOnTypeFormattingClientCapabilities {
+;;; | interface DocumentOnTypeFormattingClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface DocumentOnTypeFormattingOptions {
+;;; | interface DocumentOnTypeFormattingOptions {
 ;;; |     firstTriggerCharacter: string;
 ;;; |     moreTriggerCharacter?: string[];
 ;;; | }
 
-;;; ? interface DocumentOnTypeFormattingRegistrationOptions extends
+;;; | interface DocumentOnTypeFormattingRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions {
 ;;; | }
 
-;;; ? interface DocumentOnTypeFormattingParams {
+;;; | interface DocumentOnTypeFormattingParams {
 ;;; |     textDocument: TextDocumentIdentifier;
 ;;; |     position: Position;
 ;;; |     ch: string;
 ;;; |     options: FormattingOptions;
 ;;; | }
 
-;;; ? namespace PrepareSupportDefaultBehavior {
+;;; | namespace PrepareSupportDefaultBehavior {
 ;;; |     Identifier: 1 = 1;
 ;;; | }
 
-;;; ? type PrepareSupportDefaultBehavior = 1;
+;;; | type PrepareSupportDefaultBehavior = 1;
 
-;;; ? interface RenameClientCapabilities {
+;;; | interface RenameClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; |     prepareSupport?: boolean;
 ;;; |     prepareSupportDefaultBehavior?: PrepareSupportDefaultBehavior;
 ;;; |     honorsChangeAnnotations?: boolean;
 ;;; | }
 
-;;; ? interface RenameOptions extends WorkDoneProgressOptions {
+;;; | interface RenameOptions extends WorkDoneProgressOptions {
 ;;; |     prepareProvider?: boolean;
 ;;; | }
 
-;;; ? interface RenameRegistrationOptions extends
+;;; | interface RenameRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, RenameOptions {
 ;;; | }
 
-;;; ? interface RenameParams extends TextDocumentPositionParams,
+;;; | interface RenameParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams {
 ;;; |     newName: string;
 ;;; | }
 
-;;; ? interface PrepareRenameParams extends TextDocumentPositionParams, WorkDoneProgressParams {
+;;; | interface PrepareRenameParams extends TextDocumentPositionParams, WorkDoneProgressParams {
 ;;; | }
 
-;;; ? interface LinkedEditingRangeClientCapabilities {
+;;; | interface LinkedEditingRangeClientCapabilities {
 ;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
-;;; ? interface LinkedEditingRangeOptions extends WorkDoneProgressOptions {
+;;; | interface LinkedEditingRangeOptions extends WorkDoneProgressOptions {
 ;;; | }
 
-;;; ? interface LinkedEditingRangeRegistrationOptions extends
+;;; | interface LinkedEditingRangeRegistrationOptions extends
 ;;; |     TextDocumentRegistrationOptions, LinkedEditingRangeOptions,
 ;;; |     StaticRegistrationOptions {
 ;;; | }
 
-;;; ? interface LinkedEditingRangeParams extends TextDocumentPositionParams,
+;;; | interface LinkedEditingRangeParams extends TextDocumentPositionParams,
 ;;; |     WorkDoneProgressParams {
 ;;; | }
 
-;;; ? interface LinkedEditingRanges {
+;;; | interface LinkedEditingRanges {
 ;;; |     ranges: Range[];
 ;;; |     wordPattern?: string;
 ;;; | }
 
-;;; | interface WorkspaceSymbolClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     symbolKind?: {
-;;; |         valueSet?: SymbolKind[];
-;;; |     };
-;;; |     tagSupport?: {
-;;; |         valueSet: SymbolTag[];
-;;; |     };
-;;; |     resolveSupport?: {
-;;; |         properties: string[];
-;;; |     };
-;;; | }
-
 (define-class symbol-tag-value-set ()
   (:value-set (symbol-tag :vector t)))
+
+(define-class resolve-support-properties ()
+  (:properties (string :vector t)))
 
 (define-class workspace-symbol-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
@@ -2101,20 +1740,20 @@
   (:tag-support (symbol-tag-value-set :optional t))
   (:resolve-support (resolve-support-properties :optional t)))
 
-;;; ? interface WorkspaceSymbolOptions extends WorkDoneProgressOptions {
+;;; | interface WorkspaceSymbolOptions extends WorkDoneProgressOptions {
 ;;; |     resolveProvider?: boolean;
 ;;; | }
 
-;;; ? interface WorkspaceSymbolRegistrationOptions
+;;; | interface WorkspaceSymbolRegistrationOptions
 ;;; |     extends WorkspaceSymbolOptions {
 ;;; | }
 
-;;; ? interface WorkspaceSymbolParams extends WorkDoneProgressParams,
+;;; | interface WorkspaceSymbolParams extends WorkDoneProgressParams,
 ;;; |     PartialResultParams {
 ;;; |     query: string;
 ;;; | }
 
-;;; ? interface WorkspaceSymbol {
+;;; | interface WorkspaceSymbol {
 ;;; |     name: string;
 ;;; |     kind: SymbolKind;
 ;;; |     tags?: SymbolTag[];
@@ -2123,192 +1762,170 @@
 ;;; |     data?: LSPAny;
 ;;; | }
 
-;;; ? interface ConfigurationParams {
+;;; | interface ConfigurationParams {
 ;;; |     items: ConfigurationItem[];
 ;;; | }
 
-;;; ? interface ConfigurationItem {
+;;; | interface ConfigurationItem {
 ;;; |     scopeUri?: URI;
 ;;; |     section?: string;
-;;; | }
-
-;;; | interface DidChangeConfigurationClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
 ;;; | }
 
 (define-class did-change-configuration-client-capabilities ()
   (:dynamic-registration (boolean :optional t)))
 
-;;; | interface DidChangeConfigurationParams {
-;;; |     settings: LSPAny;
-;;; | }
-
 (define-class did-change-configuration-params ()
   (:settings lsp-any))
 
-;;; ? interface WorkspaceFoldersServerCapabilities {
+;;; | interface WorkspaceFoldersServerCapabilities {
 ;;; |     supported?: boolean;
 ;;; |     changeNotifications?: string | boolean;
-;;; | }
-
-;;; | interface WorkspaceFolder {
-;;; |     uri: URI;
-;;; |     name: string;
 ;;; | }
 
 (define-class workspace-folder ()
   (:uri uri)
   (:name string))
 
-;;; ? interface DidChangeWorkspaceFoldersParams {
+;;; | interface DidChangeWorkspaceFoldersParams {
 ;;; |     event: WorkspaceFoldersChangeEvent;
 ;;; | }
 
-;;; ? interface WorkspaceFoldersChangeEvent {
+;;; | interface WorkspaceFoldersChangeEvent {
 ;;; |     added: WorkspaceFolder[];
 ;;; |     removed: WorkspaceFolder[];
 ;;; | }
 
-;;; ? interface FileOperationRegistrationOptions {
+;;; | interface FileOperationRegistrationOptions {
 ;;; |     filters: FileOperationFilter[];
 ;;; | }
 
-;;; ? namespace FileOperationPatternKind {
+;;; | namespace FileOperationPatternKind {
 ;;; |     file: 'file' = 'file';
 ;;; |     folder: 'folder' = 'folder';
 ;;; | }
 
-;;; ? type FileOperationPatternKind = 'file' | 'folder';
+;;; | type FileOperationPatternKind = 'file' | 'folder';
 
-;;; ? interface FileOperationPatternOptions {
+;;; | interface FileOperationPatternOptions {
 ;;; |     ignoreCase?: boolean;
 ;;; | }
 
-;;; ? interface FileOperationPattern {
+;;; | interface FileOperationPattern {
 ;;; |     glob: string;
 ;;; |     matches?: FileOperationPatternKind;
 ;;; |     options?: FileOperationPatternOptions;
 ;;; | }
 
-;;; ? interface FileOperationFilter {
+;;; | interface FileOperationFilter {
 ;;; |     scheme?: string;
 ;;; |     pattern: FileOperationPattern;
 ;;; | }
 
-;;; ? interface CreateFilesParams {
+;;; | interface CreateFilesParams {
 ;;; |     files: FileCreate[];
 ;;; | }
 
-;;; ? interface FileCreate {
+;;; | interface FileCreate {
 ;;; |     uri: string;
 ;;; | }
 
-;;; ? interface RenameFilesParams {
+;;; | interface RenameFilesParams {
 ;;; |     files: FileRename[];
 ;;; | }
 
-;;; ? interface FileRename {
+;;; | interface FileRename {
 ;;; |     oldUri: string;
 ;;; |     newUri: string;
 ;;; | }
 
-;;; ? interface DeleteFilesParams {
+;;; | interface DeleteFilesParams {
 ;;; |     files: FileDelete[];
 ;;; | }
 
-;;; ? interface FileDelete {
+;;; | interface FileDelete {
 ;;; |     uri: string;
-;;; | }
-
-;;; ? interface DidChangeWatchedFilesClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     relativePatternSupport?: boolean;
 ;;; | }
 
 (define-class did-change-watched-files-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
   (:relative-pattern-support (boolean :optional t)))
 
-;;; ? interface DidChangeWatchedFilesRegistrationOptions {
+;;; | interface DidChangeWatchedFilesRegistrationOptions {
 ;;; |     watchers: FileSystemWatcher[];
 ;;; | }
 
-;;; ? type Pattern = string;
+;;; | type Pattern = string;
 
-;;; ? interface RelativePattern {
+;;; | interface RelativePattern {
 ;;; |     baseUri: WorkspaceFolder | URI;
 ;;; |     pattern: Pattern;
 ;;; | }
 
-;;; ? type GlobPattern = Pattern | RelativePattern;
+;;; | type GlobPattern = Pattern | RelativePattern;
 
-;;; ? interface FileSystemWatcher {
+;;; | interface FileSystemWatcher {
 ;;; |     globPattern: GlobPattern;
 ;;; |     kind?: WatchKind;
 ;;; | }
 
-;;; ? namespace WatchKind {
+;;; | namespace WatchKind {
 ;;; |     Create = 1;
 ;;; |     Change = 2;
 ;;; |     Delete = 4;
 ;;; | }
 
-;;; ? type WatchKind = uinteger;
+;;; | type WatchKind = uinteger;
 
-;;; ? interface DidChangeWatchedFilesParams {
+;;; | interface DidChangeWatchedFilesParams {
 ;;; |     changes: FileEvent[];
 ;;; | }
 
-;;; ? interface FileEvent {
+;;; | interface FileEvent {
 ;;; |     uri: DocumentUri;
 ;;; |     type: FileChangeType;
 ;;; | }
 
-;;; ? namespace FileChangeType {
+;;; | namespace FileChangeType {
 ;;; |     Created = 1;
 ;;; |     Changed = 2;
 ;;; |     Deleted = 3;
 ;;; | }
 
-;;; ? type FileChangeType = 1 | 2 | 3;
-
-;;; | interface ExecuteCommandClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; | }
+;;; | type FileChangeType = 1 | 2 | 3;
 
 (define-class execute-command-client-capabilities ()
   (:dynamic-registration (boolean :optional t)))
 
-;;; ? interface ExecuteCommandOptions extends WorkDoneProgressOptions {
+;;; | interface ExecuteCommandOptions extends WorkDoneProgressOptions {
 ;;; |     commands: string[];
 ;;; | }
 
-;;; ? interface ExecuteCommandRegistrationOptions
+;;; | interface ExecuteCommandRegistrationOptions
 ;;; |     extends ExecuteCommandOptions {
 ;;; | }
 
-;;; ? interface ExecuteCommandParams extends WorkDoneProgressParams {
+;;; | interface ExecuteCommandParams extends WorkDoneProgressParams {
 ;;; |     command: string;
 ;;; |     arguments?: LSPAny[];
 ;;; | }
 
-;;; ? interface ApplyWorkspaceEditParams {
+;;; | interface ApplyWorkspaceEditParams {
 ;;; |     label?: string;
 ;;; |     edit: WorkspaceEdit;
 ;;; | }
 
-;;; ? interface ApplyWorkspaceEditResult {
+;;; | interface ApplyWorkspaceEditResult {
 ;;; |     applied: boolean;
 ;;; |     failureReason?: string;
 ;;; |     failedChange?: uinteger;
 ;;; | }
 
-;;; ? interface ShowMessageParams {
+;;; | interface ShowMessageParams {
 ;;; |     type: MessageType;
 ;;; |     message: string;
 ;;; | }
 
-;;; ? namespace MessageType {
+;;; | namespace MessageType {
 ;;; |     Error = 1;
 ;;; |     Warning = 2;
 ;;; |     Info = 3;
@@ -2316,49 +1933,49 @@
 ;;; |     Debug = 5;
 ;;; | }
 
-;;; ? type MessageType = 1 | 2 | 3 | 4 | 5;
+;;; | type MessageType = 1 | 2 | 3 | 4 | 5;
 
-;;; ? interface ShowMessageRequestClientCapabilities {
+;;; | interface ShowMessageRequestClientCapabilities {
 ;;; |     messageActionItem?: {
 ;;; |         additionalPropertiesSupport?: boolean;
 ;;; |     };
 ;;; | }
 
-;;; ? interface ShowMessageRequestParams {
+;;; | interface ShowMessageRequestParams {
 ;;; |     type: MessageType;
 ;;; |     message: string;
 ;;; |     actions?: MessageActionItem[];
 ;;; | }
 
-;;; ? interface MessageActionItem {
+;;; | interface MessageActionItem {
 ;;; |     title: string;
 ;;; | }
 
-;;; ? interface ShowDocumentClientCapabilities {
+;;; | interface ShowDocumentClientCapabilities {
 ;;; |     support: boolean;
 ;;; | }
 
-;;; ? interface ShowDocumentParams {
+;;; | interface ShowDocumentParams {
 ;;; |     uri: URI;
 ;;; |     external?: boolean;
 ;;; |     takeFocus?: boolean;
 ;;; |     selection?: Range;
 ;;; | }
 
-;;; ? interface ShowDocumentResult {
+;;; | interface ShowDocumentResult {
 ;;; |     success: boolean;
 ;;; | }
 
-;;; ? interface LogMessageParams {
+;;; | interface LogMessageParams {
 ;;; |     type: MessageType;
 ;;; |     message: string;
 ;;; | }
 
-;;; ? interface WorkDoneProgressCreateParams {
+;;; | interface WorkDoneProgressCreateParams {
 ;;; |     token: ProgressToken;
 ;;; | }
 
-;;; ? interface WorkDoneProgressCancelParams {
+;;; | interface WorkDoneProgressCancelParams {
 ;;; |     token: ProgressToken;
 ;;; | }
 
@@ -2382,48 +1999,11 @@
   (:normalizes-line-endings (boolean :optional t))
   (:change-annotation-support (change-annotation-support :optional t)))
 
-;;; | interface TextDocumentSyncClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     willSave?: boolean;
-;;; |     willSaveWaitUntil?: boolean;
-;;; |     didSave?: boolean;
-;;; | }
-
 (define-class text-document-sync-client-capabilities ()
   (:dynamic-registration (boolean :optional t))
   (:will-save (boolean :optional t))
   (:will-save-wait-until (boolean :optional t))
   (:did-save (boolean :optional t)))
-
-;;; ? interface CompletionClientCapabilities {
-;;; |     dynamicRegistration?: boolean;
-;;; |     completionItem?: {
-;;; |         snippetSupport?: boolean;
-;;; |         commitCharactersSupport?: boolean;
-;;; |         documentationFormat?: MarkupKind[];
-;;; |         deprecatedSupport?: boolean;
-;;; |         preselectSupport?: boolean;
-;;; |         tagSupport?: {
-;;; |             valueSet: CompletionItemTag[];
-;;; |         };
-;;; |         insertReplaceSupport?: boolean;
-;;; |         resolveSupport?: {
-;;; |             properties: string[];
-;;; |         };
-;;; |         insertTextModeSupport?: {
-;;; |             valueSet: InsertTextMode[];
-;;; |         };
-;;; |         labelDetailsSupport?: boolean;
-;;; |     };
-;;; |     completionItemKind?: {
-;;; |         valueSet?: CompletionItemKind[];
-;;; |     };
-;;; |     contextSupport?: boolean;
-;;; |     insertTextMode?: InsertTextMode;
-;;; |     completionList?: {
-;;; |         itemDefaults?: string[];
-;;; |     }
-;;; | }
 
 (define-class completion-item-tag-value-set ()
   (:value-set (completion-item-tag :vector t)))
@@ -2445,35 +2025,6 @@
 
 (define-class completion-list-capabilities ()
   (:item-defaults (string :optional t :vector t)))
-
-;;; | namespace CompletionItemKind {
-;;; |     Text = 1;
-;;; |     Method = 2;
-;;; |     Function = 3;
-;;; |     Constructor = 4;
-;;; |     Field = 5;
-;;; |     Variable = 6;
-;;; |     Class = 7;
-;;; |     Interface = 8;
-;;; |     Module = 9;
-;;; |     Property = 10;
-;;; |     Unit = 11;
-;;; |     Value = 12;
-;;; |     Enum = 13;
-;;; |     Keyword = 14;
-;;; |     Snippet = 15;
-;;; |     Color = 16;
-;;; |     File = 17;
-;;; |     Reference = 18;
-;;; |     Folder = 19;
-;;; |     EnumMember = 20;
-;;; |     Constant = 21;
-;;; |     Struct = 22;
-;;; |     Event = 23;
-;;; |     Operator = 24;
-;;; |     TypeParameter = 25;
-;;; | }
-;;; | type CompletionItemKind = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25;
 
 (define-enum completion-item-kind ()
   (:text 1)
@@ -2513,7 +2064,7 @@
   (:insert-text-mode (insert-text-mode :optional t))
   (:completion-list completion-list-capabilities))
 
-;;; ? interface TextDocumentClientCapabilities {
+;;; | interface TextDocumentClientCapabilities {
 ;;; |     synchronization?: TextDocumentSyncClientCapabilities;
 ;;; |     completion?: CompletionClientCapabilities;
 ;;; |     hover?: HoverClientCapabilities;
@@ -2578,11 +2129,11 @@
   #++ (:inlay-hint (inlay-hint-client-capabilities :optional t))
   #++ (:diagnostic (diagnostic-client-capabilities :optional t)))
 
-;;; ? interface NotebookDocumentClientCapabilities {
+;;; | interface NotebookDocumentClientCapabilities {
 ;;; |     synchronization: NotebookDocumentSyncClientCapabilities;
 ;;; | }
 
-;;; ? interface ClientCapabilities {
+;;; | interface ClientCapabilities {
 ;;; |     workspace?: {
 ;;; |         applyEdit?: boolean;
 ;;; |         workspaceEdit?: WorkspaceEditClientCapabilities;
@@ -2650,7 +2201,7 @@
   #++ (:general (general-client-capabilities :optional t))
   #++ (:experimental lsp-any))
 
-;;; ? interface ServerCapabilities {
+;;; | interface ServerCapabilities {
 ;;; |     positionEncoding?: PositionEncodingKind;
 ;;; |     textDocumentSync?: TextDocumentSyncOptions | TextDocumentSyncKind;
 ;;; |     notebookDocumentSync?: NotebookDocumentSyncOptions
@@ -2705,21 +2256,6 @@
 ;;; |         };
 ;;; |     };
 ;;; |     experimental?: LSPAny;
-;;; | }
-
-;;; | interface InitializeParams extends WorkDoneProgressParams {
-;;; |     processId: integer | null;
-;;; |     clientInfo?: {
-;;; |         name: string;
-;;; |         version?: string;
-;;; |     };
-;;; |     locale?: string;
-;;; |     rootPath?: string | null;
-;;; |     rootUri: DocumentUri | null;
-;;; |     initializationOptions?: LSPAny;
-;;; |     capabilities: ClientCapabilities;
-;;; |     trace?: TraceValue;
-;;; |     workspaceFolders?: WorkspaceFolder[] | null;
 ;;; | }
 
 (define-class client-info ()
@@ -2777,14 +2313,6 @@
   #++ (:workspace (workspace-server-capabilities :optional t))
   (:experimental (lsp-any :optional t)))
 
-;;; ? interface InitializeResult {
-;;; |     capabilities: ServerCapabilities;
-;;; |     serverInfo?: {
-;;; |         name: string;
-;;; |         version?: string;
-;;; |     };
-;;; | }
-
 (define-class server-info ()
   (:name string)
   (:version (string :optional t)))
@@ -2793,17 +2321,14 @@
   (:capabilities server-capabilities)
   (:server-info server-info))
 
-;;; ? namespace InitializeErrorCodes {
+;;; | namespace InitializeErrorCodes {
 ;;; |     unknownProtocolVersion: 1 = 1;
 ;;; | }
 
-;;; ? type InitializeErrorCodes = 1;
+;;; | type InitializeErrorCodes = 1;
 
-;;; ? interface InitializeError {
+;;; | interface InitializeError {
 ;;; |     retry: boolean;
-;;; | }
-
-;;; | interface InitializedParams {
 ;;; | }
 
 (define-class initialized-params ())

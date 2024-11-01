@@ -24,7 +24,8 @@
            #:message-value
            #:optional
            #:set-field
-           #:set-field-class))
+           #:set-field-class
+           #:set-field-vector-class))
 
 (in-package #:coalton-lsp.lib.message)
 
@@ -52,42 +53,45 @@ The output value will have string-valued map keys.")
 (defclass message-field (message-type)
   ((json :initarg :json
          :reader json-key) ; field value's key in a JSON map
-   (class :initarg :class
-          :reader message-class)
+   (class-name :initarg :class-name
+          :reader message-class-name)
    (optional :initarg :optional
              :initform nil)
    (vector :initarg :vector
            :initform nil)))
 
+(defmethod message-class ((self message-field))
+  (find-message-class (message-class-name self)))
+
 (defmethod copy-message ((field message-field))
-  (with-slots (name json class optional vector) field
+  (with-slots (name json class-name optional vector) field
     (make-instance 'message-field
                    :name name
                    :json json
-                   :class class
+                   :class-name class-name
                    :optional optional
                    :vector vector)))
 
 (defmethod print-object ((self message-field) stream)
-  (with-slots (name class) self
+  (with-slots (name) self
     (print-unreadable-object (self stream :type t :identity t)
-      (format stream "~a (~a)" name (name class)))))
+      (format stream "~a (~a)" name (message-class-name self)))))
 
 (defun parse-field-type (type)
   (etypecase type
     (list
      (destructuring-bind (type &key optional vector) type
-       (list (find-message-class type) optional vector)))
+       (list type optional vector)))
     (symbol
-     (list (find-message-class type) nil nil))))
+     (list type nil nil))))
 
 (defun make-field (spec)
   (destructuring-bind (name type) spec
-    (destructuring-bind (class optional vector) (parse-field-type type)
+    (destructuring-bind (class-name optional vector) (parse-field-type type)
       (make-instance 'message-field
                      :name name
                      :json (camel-case name)
-                     :class class
+                     :class-name class-name
                      :optional optional
                      :vector vector))))
 
@@ -114,7 +118,15 @@ The output value will have string-valued map keys.")
   "Replace the definition of a single foield"
   (loop :for field :across (slot-value class 'fields)
         :do (when (eq (name field) name)
-              (setf (slot-value field 'class) field-class)))
+              (setf (slot-value field 'class-name) (name field-class))))
+  class)
+
+(defun set-field-vector-class (class name field-class)
+  "Replace the definition of a single foield"
+  (loop :for field :across (slot-value class 'fields)
+        :do (when (eq (name field) name)
+              (setf (slot-value field 'class-name) (name field-class)
+                    (slot-value field 'vector) t)))
   class)
 
 (defun %get-field (class name)

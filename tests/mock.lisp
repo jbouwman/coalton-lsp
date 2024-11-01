@@ -3,7 +3,7 @@
 (defun mock-publish-diagnostics ()
   (coalton-lsp::make-notification
    "textDocument/publishDiagnostics"
-   (let ((message (make-message 'coalton-lsp::text-document-publish-diagnostics-params)))
+   (let ((message (make-message 'coalton-lsp::publish-diagnostics-params)))
      (set-field message :uri "file:///Users/jlbouwman/git/coalton-mode/resources/fib.coal")
      (set-field message :diagnostics
                      (list (message-value

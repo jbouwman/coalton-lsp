@@ -16,5 +16,6 @@
   (:export #:main
            #:*server*
            #:*server-port*
+           #:start-network-server
            #:start-server
            #:stop-server))

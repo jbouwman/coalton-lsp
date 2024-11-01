@@ -2,8 +2,6 @@
 
 (in-package :coalton-lsp)
 
-(defgeneric uri (resource))
-
 (defgeneric input-stream (session-io))
 
 (defgeneric output-stream (session-io))
@@ -15,7 +13,7 @@
 
 ;;; network server
 
-(defvar *default-port* 7887
+(defvar *server-port* 7887
   "The default port of LSP sessions.")
 
 (defclass network-io ()
@@ -39,15 +37,15 @@
    (sessions :initform nil))
   (:documentation "A Coalton LSP server"))
 
-(defmethod uri ((self network-server))
-  "Return the string representation of SERVER's network address."
-  (with-slots (config) self
+(defun server-url (network-server)
+  "Return a string representation of SERVER's URL."
+  (with-slots (config) network-server
     (destructuring-bind (&key host port &allow-other-keys) config
       (format nil "json-rpc://~a:~a" host port))))
 
 (defmethod print-object ((self network-server) stream)
   (print-unreadable-object (self stream :type t :identity t)
-    (write-string (uri self) stream)))
+    (write-string (server-url self) stream)))
 
 (defmethod run ((self network-server))
   (with-slots (listener sessions) self
@@ -107,9 +105,6 @@
 (defclass stream-server ()
   ())
 
-(defmethod uri ((self stream-server))
-  "json-rpc:stdio")
-
 (defmethod stop-session ((self stream-server) session))
 
 (defun start-stream-server (input output)
@@ -133,7 +128,7 @@
   (/info "~a halted" *server*)
   (setf *server* nil))
 
-(defun start-network-server (port)
+(defun start-network-server (&optional (port *server-port*))
   "Run a Coalton LSP server on PORT."
   (when *server*
     (error "server is running: ~a" *server*))
