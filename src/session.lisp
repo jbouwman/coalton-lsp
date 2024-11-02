@@ -5,8 +5,8 @@
        :reader session-id)
    (server :initarg :server)
    (io :initarg :io)
-   (event-queue :initform (make-instance 'worker)
-                :reader event-queue)
+   (worker :initform (make-instance 'worker)
+                :reader worker)
    (state :accessor session-state
           :initform 'uninitialized)
    (params :initform nil
@@ -23,8 +23,8 @@
 (defun submit-event (session method value)
   (with-session-context (session)
     (/trace "submit-event ~a ~a" method value)
-    (with-slots (event-queue) session
-      (enqueue event-queue (cons method value)))))
+    (with-slots (worker) session
+      (enqueue worker (cons method value)))))
 
 (defun process-event (session event)
   (with-session-context (session)
@@ -84,11 +84,33 @@
     (let ((uri (cdr (assoc "uri" document :test #'string=))))
       (submit-event session 'document-changed uri))))
 
+(defun make-diagnostic (s1 e1 s2 e2 message code)
+  (new-message 'diagnostic
+               :message message
+               :code code
+               :severity :warning
+               :source "coalton"
+               :range `(:start (:line ,(1- s1)
+                                :character ,e1)
+                        :end (:line ,(1- s2)
+                              :character ,e2))))
+
+(defun make-diagnostics (c)
+  (mapcar (lambda (e)
+            (let ((coalton-impl/settings:*coalton-print-unicode* nil))
+              (destructuring-bind (note message start end) e
+                (message-value
+                 (make-diagnostic (car start) (cdr start)
+                                  (car end) (cdr end)
+                                  (format nil "~a - ~a" note message)
+                                  1)))))
+          (export-condition c)))
+
 (defun update-diagnostics (session uri)
-  (let ((message (make-message 'publish-diagnostics-params)))
-    (set-field message :uri uri)
-    (set-field message :diagnostics (compile-uri uri))
-    (notify session "textDocument/publishDiagnostics" message)))
+  (notify session "textDocument/publishDiagnostics" 
+          (new-message 'publish-diagnostics-params
+                       :uri uri
+                       :diagnostics (compile-uri uri))))
 
 (defun document-opened (session uri)
   (update-diagnostics session uri))
@@ -132,9 +154,9 @@
       response)))
 
 (defun make-error-response (id condition)
-  (let ((response (make-message 'response-message)))
-    (set-field response :jsonrpc "2.0")
-    (set-field response :id id)
+  (let ((response (new-message 'response-message
+                               :jsonrpc "2.0"
+                               :id id)))
     (set-field response (list :error :code) (error-code condition))
     (set-field response (list :error :message) (error-message condition))
     response))
@@ -178,44 +200,44 @@
            (invalid-request "missing method")))
     method))
 
-(defvar *messages*
+(defvar *requests*
   (make-hash-table :test 'equal))
 
-(defstruct message-handler
+(defstruct request-handler
   params
   function)
 
-(defun get-message-handler (method)
-  (let ((handler (gethash method *messages*)))
+(defun get-request-handler (method)
+  (let ((handler (gethash method *requests*)))
     (unless handler
       (method-not-found "unsupported method: ~a" method))
     handler))
 
-(defun %define-message-handler (&key method params function)
+(defun %define-request (&key method params function)
   (unless (fboundp function)
-    (warn "message handler function is undefined: ~a" function))
+    (warn "request handler function is undefined: ~a" function))
   (unless (message-class-p params)
-    (warn "message parameter class is undefined: ~a" params))
-  (setf (gethash method *messages*)
-        (make-message-handler :params params
+    (warn "request parameter class is undefined: ~a" params))
+  (setf (gethash method *requests*)
+        (make-request-handler :params params
                               :function function)))
 
-(defmacro define-handler (method params function)
-  `(%define-message-handler :method ,method
-                            :params ',params
-                            :function ',function))
+(defmacro define-request (method params function)
+  `(%define-request :method ,method
+                    :params ',params
+                    :function ',function))
 
 (defun request-params (request)
   "Return REQUEST's params message."
   (let* ((method (request-method request))
-         (params-class (message-handler-params (gethash method *messages*))))
+         (params-class (request-handler-params (gethash method *requests*))))
     (when params-class
       (make-message params-class (get-field request :params)))))
 
 (defun process-notification (session request)
   (handler-case
-      (let ((handler (get-message-handler (request-method request))))
-        (funcall (message-handler-function handler) session request))
+      (let ((handler (get-request-handler (request-method request))))
+        (funcall (request-handler-function handler) session request))
     (lsp-error ()
       ;; A message was logged when the error was signaled, and
       ;; there's nothing to return to the client. No-op.
@@ -223,8 +245,8 @@
 
 (defun process-request (session request)
   (handler-case
-      (let ((handler (get-message-handler (request-method request))))
-        (funcall (message-handler-function handler) session request))
+      (let ((handler (get-request-handler (request-method request))))
+        (funcall (request-handler-function handler) session request))
     (lsp-error (condition)
       (make-error-response (get-field request :id) condition))))
 
@@ -243,11 +265,11 @@
         (write-rpc json (output-stream io))))))
 
 (defmethod run ((self session))
-  (with-slots (io event-queue server) self
-    (setf (worker-function event-queue)
+  (with-slots (io worker server) self
+    (setf (worker-function worker)
           (lambda (event)
             (process-event self event)))
-    (start event-queue)
+    (start worker)
     (handler-case
         (loop :do
           (handler-case
@@ -269,7 +291,7 @@
 (defmethod stop ((self session))
   (with-session-context (self)
     (/info "stopping")
-    (with-slots (io event-queue) self
-      (stop event-queue)
+    (with-slots (io worker) self
+      (stop worker)
       (stop io))
     (call-next-method)))

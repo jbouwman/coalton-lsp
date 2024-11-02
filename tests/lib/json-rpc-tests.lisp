@@ -1,4 +1,11 @@
-(in-package #:coalton-lsp.tests)
+(fiasco:define-test-package #:coalton-lsp.lib.json-rpc-tests
+  (:use
+   #:cl
+   #:coalton-lsp.lib.json
+   #:coalton-lsp.lib.json-rpc
+   #:coalton-lsp.lib.test))
+
+(in-package #:coalton-lsp.lib.json-rpc-tests)
 
 (deftest rpc-tests/headers ()
   (let ((parsed-headers
