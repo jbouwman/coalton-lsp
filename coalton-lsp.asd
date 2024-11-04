@@ -18,11 +18,18 @@
                              (:file "json")
                              (:file "json-rpc")
                              (:file "uri")))
+               (:file "coalton")
                (:file "package")
-               (:file "compiler")
                (:file "session")
-               (:file "request-value")
-               (:file "request-handler")
+               (:module "lsp"
+                :serial t
+                :components ((:file "lsp")
+                             (:file "document")
+                             (:file "navigation")
+                             (:file "lifecycle")
+                             (:file "notebook")
+                             (:file "window")
+                             (:file "workspace")))
                (:file "server")))
 
 (defsystem #:coalton-lsp/tests
@@ -30,13 +37,15 @@
                #:fiasco)
   :pathname "tests/"
   :serial t
-  :components ((:file "package")
+  :components ((:file "test")
+               (:file "package")
                (:file "mock")
                (:module "lib"
                 :serial t
                 :components ((:file "json-tests")
+                             (:file "json-rpc-tests")
                              (:file "message-tests")))
                (:file "lsp-tests")
+               (:file "coalton-tests")
                (:file "protocol-tests")
-               (:file "rpc-tests")
                (:file "session-tests")))

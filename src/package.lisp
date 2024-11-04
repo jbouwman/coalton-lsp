@@ -9,9 +9,7 @@
         #:coalton-lsp.lib.process
         #:coalton-lsp.lib.message)
   (:local-nicknames
-   (#:parser #:coalton-impl/parser)
-   (#:program #:coalton-impl/parser/toplevel)
-   (#:source #:coalton-impl/source)
+   (#:coalton #:coalton-lsp.coalton)
    (#:uri #:coalton-lsp.lib.uri))
   (:export #:main
            #:*server*

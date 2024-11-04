@@ -9,6 +9,7 @@
            #:define-union
            #:find-message-class
            #:get-field
+           #:get-field-2
            #:json-key
            #:json-value
            #:make-message
@@ -22,8 +23,10 @@
            #:message-type
            #:message-union
            #:message-value
+           #:new-message
            #:optional
            #:set-field
+           #:set-field-2
            #:set-field-class
            #:set-field-vector-class))
 
@@ -247,7 +250,23 @@ The output value will have string-valued map keys.")
 (defun get-field (message path)
   (message-value (%get-path message (listify path))))
 
+(defun set-field-2 (message key value)
+  (let ((inner (%get-path message (listify key))))
+    (if (typep (message-class inner) 'message-class)
+        (progn
+          (loop :for (key value) :on value :by #'cddr
+                :do (set-field-2 inner key value))
+          (set-field message key (message-value inner)))
+        (set-field message key value))
+    message))
+
 (defun set-field (message path value)
   (setf (slot-value message 'value)
         (slot-value (%set-path message (listify path) value) 'value))
   message)
+
+(defun new-message (message-class &rest plist)
+  (let ((message (make-message message-class)))
+    (loop :for (key value) :on plist :by #'cddr
+          :do (set-field-2 message key value))
+    message))

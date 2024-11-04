@@ -11,9 +11,9 @@
   (:debug (boolean :optional t)))
 
 (deftest message-tests/value ()
-  (let ((message (make-message 'test-message)))
-    (set-field message :debug t)
-    (set-field message :flags (list "a" "b" "g"))
+  (let ((message (new-message 'test-message
+                              :debug t
+                              :flags '("a" "b" "g"))))
     (is (equalp (message-value message)
                 '(("flags" "a" "b" "g")
                   ("debug" . T))))

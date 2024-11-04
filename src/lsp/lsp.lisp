@@ -2332,3 +2332,359 @@
 ;;; | }
 
 (define-class initialized-params ())
+
+;;; ------------------------------------------------------------------------
+;;; define-request: bind requests to handler functions and parameter types
+;;; ------------------------------------------------------------------------
+
+(define-request "$/logTrace"
+  log-trace-params
+  handle-log-trace)
+
+(define-request "$/setTrace"
+  set-trace-params
+  handle-set-trace)
+
+(define-request "callHierarchy/incomingCalls"
+  call-hierarchy-incoming-calls-params
+  handle-call-hierarchy-incoming-calls)
+
+(define-request "callHierarchy/outgoingCalls"
+  call-hierarchy-outgoing-calls-params
+  handle-call-hierarchy-outgoing-calls)
+
+(define-request "client/registerCapability"
+  registration-params
+  handle-client-register-capability)
+
+(define-request "client/unregisterCapability"
+  unregistration-params
+  handle-client-unregister-capability)
+
+(define-request "codeAction/resolve"
+  code-action
+  handle-code-action-resolve)
+
+(define-request "codeLens/resolve"
+  code-lens
+  handle-code-lens-resolve)
+
+(define-request "completionItem/resolve"
+  completion-item
+  handle-completion-item-resolve)
+
+(define-request "documentLink/resolve"
+  document-link
+  handle-document-link-resolve)
+
+(define-request "exit"
+  empty
+  handle-exit)
+
+(define-request "initialize"
+  initialize-params
+  handle-initialize)
+
+(define-request "initialized"
+  initialized-params
+  handle-initialized)
+
+(define-request "inlayHint/resolve"
+  inlay-hint
+  handle-inlay-hint-resolve)
+
+(define-request "notebookDocument/didChange"
+  did-change-notebook-document-params
+  handle-notebook-document-did-change)
+
+(define-request "notebookDocument/didClose"
+  did-close-notebook-document-params
+  handle-notebook-document-did-close)
+
+(define-request "notebookDocument/didOpen"
+  did-open-notebook-document-params
+  handle-notebook-document-did-open)
+
+(define-request "notebookDocument/didSave"
+  did-save-notebook-document-params
+  handle-notebook-document-did-save)
+
+(define-request "shutdown"
+  empty
+  handle-shutdown)
+
+(define-request "telemetry/event"
+  lsp-any
+  handle-telemetry-event)
+
+(define-request "textDocument/codeAction"
+  code-action-params
+  handle-text-document-code-action)
+
+(define-request "textDocument/codeLens"
+  code-lens-params
+  handle-text-document-code-lens)
+
+(define-request "textDocument/colorPresentation"
+  color-presentation-params
+  handle-text-document-color-presentation)
+
+(define-request "textDocument/completion"
+  completion-params
+  handle-text-document-completion)
+
+(define-request "textDocument/declaration"
+  declaration-params
+  handle-text-document-declaration)
+
+(define-request "textDocument/definition"
+  definition-params
+  handle-text-document-definition)
+
+(define-request "textDocument/diagnostic"
+  document-diagnostic-params
+  handle-text-document-diagnostic)
+
+(define-request "textDocument/didChange"
+  did-change-text-document-params
+  handle-text-document-did-change)
+
+(define-request "textDocument/didClose"
+  did-close-text-document-params
+  handle-text-document-did-close)
+
+(define-request "textDocument/didOpen"
+  did-open-text-document-params
+  handle-text-document-did-open)
+
+(define-request "textDocument/didSave"
+  did-save-text-document-params
+  handle-text-document-did-save)
+
+(define-request "textDocument/documentColor"
+  document-color-params
+  handle-text-document-document-color)
+
+(define-request "textDocument/documentHighlight"
+  document-highlight-params
+  handle-text-document-document-highlight)
+
+(define-request "textDocument/documentLink"
+  document-link-params
+  handle-text-document-document-link)
+
+(define-request "textDocument/documentSymbol"
+  document-symbol-params
+  handle-text-document-document-symbol)
+
+(define-request "textDocument/foldingRange"
+  folding-range-params
+  handle-text-document-folding-range)
+
+(define-request "textDocument/formatting"
+  document-formatting-params
+  handle-text-document-formatting)
+
+(define-request "textDocument/hover"
+  hover-params
+  handle-text-document-hover)
+
+(define-request "textDocument/implementation"
+  implementation-params
+  handle-text-document-implementation)
+
+(define-request "textDocument/inlayHint"
+  inlay-hint-params
+  handle-text-document-inlay-hint)
+
+(define-request "textDocument/inlineValue"
+  inline-value-params
+  handle-text-document-inline-value)
+
+(define-request "textDocument/linkedEditingRange"
+  linked-editing-range-params
+  handle-text-document-linked-editing-range)
+
+(define-request "textDocument/moniker"
+  moniker-params
+  handle-text-document-moniker)
+
+(define-request "textDocument/onTypeFormatting"
+  document-on-type-formatting-params
+  handle-text-document-on-type-formatting)
+
+(define-request "textDocument/prepareCallHierarchy"
+  call-hierarchy-prepare-params
+  handle-text-document-prepare-call-hierarchy)
+
+(define-request "textDocument/prepareRename"
+  prepare-rename-params
+  handle-text-document-prepare-rename)
+
+(define-request "textDocument/prepareTypeHierarchy"
+  type-hierarchy-prepare-params
+  handle-text-document-prepare-type-hierarchy)
+
+(define-request "textDocument/publishDiagnostics"
+  publish-diagnostics-params
+  handle-text-document-publish-diagnostics)
+
+(define-request "textDocument/rangeFormatting"
+  document-range-formatting-params
+  handle-text-document-range-formatting)
+
+(define-request "textDocument/references"
+  reference-params
+  handle-text-document-references)
+
+(define-request "textDocument/rename"
+  rename-params
+  handle-text-document-rename)
+
+(define-request "textDocument/selectionRange"
+  selection-range-params
+  handle-text-document-selection-range)
+
+(define-request "textDocument/semanticTokens/full"
+  semantic-tokens-params
+  handle-text-document-semantic-tokens-full)
+
+(define-request "textDocument/semanticTokens/full/delta"
+  semantic-tokensDelta-params
+  handle-text-document-semantic-tokens-full-delta)
+
+(define-request "textDocument/semanticTokens/range"
+  semantic-tokens-range-params
+  handle-text-document-semantic-tokens-range)
+
+(define-request "textDocument/signatureHelp"
+  signature-help-params
+  handle-text-document-signature-help)
+
+(define-request "textDocument/typeDefinition"
+  type-definition-params
+  handle-text-document-type-definition)
+
+(define-request "textDocument/willSave"
+  will-save-text-document-params
+  handle-text-document-will-save)
+
+(define-request "textDocument/willSaveWaitUntil"
+  will-save-text-document-params
+  handle-text-document-will-save-wait-until)
+
+(define-request "typeHierarchy/subtypes"
+  type-hierarchy-subtypes-params
+  handle-type-hierarchy-subtypes)
+
+(define-request "typeHierarchy/supertypes"
+  type-hierarchy-supertypes-params
+  handle-type-hierarchy-supertypes)
+
+(define-request "window/logMessage"
+  log-message-params
+  handle-window-log-message)
+
+(define-request "window/showDocument"
+  show-document-params
+  handle-window-show-document)
+
+(define-request "window/showMessage"
+  show-message-params
+  handle-window-show-message)
+
+(define-request "window/showMessageRequest"
+  show-message-request-params
+  handle-window-show-message-request)
+
+(define-request "window/workDoneProgress/cancel"
+  work-done-progress-cancel-params
+  handle-window-work-done-progress-cancel)
+
+(define-request "window/workDoneProgress/create"
+  work-done-progress-create-params
+  handle-window-work-done-progress-create)
+
+(define-request "workspace/applyEdit"
+  apply-workspace-edit-params
+  handle-workspace-apply-edit)
+
+(define-request "workspace/codeLens-refresh"
+  empty
+  handle-workspace-code-lens-refresh)
+
+(define-request "workspace/configuration"
+  configuration-params
+  handle-workspace-configuration)
+
+(define-request "workspace/diagnostic"
+  workspace-diagnostic-params
+  handle-workspace-diagnostic)
+
+(define-request "workspace/diagnostic/refresh"
+  empty
+  handle-workspace-diagnostic-refresh)
+
+(define-request "workspace/didChangeConfiguration"
+  did-change-configuration-params
+  handle-workspace-did-change-configuration)
+
+(define-request "workspace/didChangeWatchedFiles"
+  did-change-watched-files-params
+  handle-workspace-did-change-watched-files)
+
+(define-request "workspace/didChangeWorkspaceFolders"
+  did-change-workspace-folders-params
+  handle-workspace-did-change-workspace-folders)
+
+(define-request "workspace/didCreateFiles"
+  create-files-params
+  handle-workspace-did-create-files)
+
+(define-request "workspace/didDeleteFiles"
+  delete-files-params
+  handle-workspace-did-delete-files)
+
+(define-request "workspace/didRenameFiles"
+  rename-files-params
+  handle-workspace-did-rename-files)
+
+(define-request "workspace/executeCommand"
+  execute-command-params
+  handle-workspace-execute-command)
+
+(define-request "workspace/inlayHint/refresh"
+  empty
+  handle-workspace-inlay-hint-refresh)
+
+(define-request "workspace/inlineValue/refresh"
+  empty
+  handle-workspace-inline-value-refresh)
+
+(define-request "workspace/semanticTokens/refresh"
+  empty
+  handle-workspace-semantic-tokens-refresh)
+
+(define-request "workspace/symbol"
+  workspace-symbol-params
+  handle-workspace-symbol)
+
+(define-request "workspace/willCreateFiles"
+  create-files-params
+  handle-workspace-will-create-files)
+
+(define-request "workspace/willDeleteFiles"
+  delete-files-params
+  handle-workspace-will-delete-files)
+
+(define-request "workspace/willRenameFiles"
+  rename-files-params
+  handle-workspace-will-rename-files)
+
+(define-request "workspace/workspaceFolders"
+  empty
+  handle-workspace-workspace-folders)
+
+(define-request "workspaceSymbol/resolve"
+  workspace-symbol
+  handle-workspace-symbol-resolve)

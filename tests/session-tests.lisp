@@ -53,10 +53,10 @@
                                   :did-change-watched-files :dynamic-registration)))))))
 
 (deftest session-tests/set-field ()
-  (let ((params (make-message 'coalton-lsp::initialize-params)))
+  (let ((params (new-message 'coalton-lsp::initialize-params)))
     (message-value (coalton-lsp.lib.message::%set-key params :capabilities 'x)))
-  (let ((params (make-message 'coalton-lsp::initialize-params)))
-    (set-field params '(:capabilities :workspace) 'x)))
+  (new-message 'coalton-lsp::initialize-params
+               :capabilities '(:workspace x)))
 
 (deftest session-tests/encode-json ()
   (is-string= (coalton-lsp::to-json
