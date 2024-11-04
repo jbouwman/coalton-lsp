@@ -6,7 +6,7 @@
                #:coalton
                #:com.inuoe.jzon
                #:usocket)
-  :pathname "src/"
+  :pathname "src"
   :serial t
   :components ((:module "lib"
                 :serial t
@@ -20,7 +20,11 @@
                              (:file "uri")))
                (:file "coalton")
                (:file "package")
-               (:file "session")
+               (:module "session"
+                :serial t
+                :components ((:file "session")
+                             (:file "diagnostic")
+                             (:file "document-symbol")))
                (:module "lsp"
                 :serial t
                 :components ((:file "lsp")
@@ -35,9 +39,10 @@
 (defsystem #:coalton-lsp/tests
   :depends-on (#:coalton-lsp
                #:fiasco)
-  :pathname "tests/"
+  :pathname "tests"
   :serial t
-  :components ((:file "test")
+  :components ((:file "laoder")
+               (:file "test")
                (:file "package")
                (:file "mock")
                (:module "lib"
@@ -48,4 +53,6 @@
                (:file "lsp-tests")
                (:file "coalton-tests")
                (:file "protocol-tests")
-               (:file "session-tests")))
+               (:module "session"
+                :serial t
+                :components ((:file "session-tests")))))

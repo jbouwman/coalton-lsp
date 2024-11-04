@@ -9,7 +9,8 @@
    #:coalton-lsp.lib.json
    #:coalton-lsp.lib.json-rpc)
   (:export #:is-string=
-           #:rpc-example))
+           #:rpc-example
+           #:test-suite))
 
 (in-package #:coalton-lsp.lib.test)
 
@@ -34,10 +35,19 @@
     (subseq path 0 (1- (length path)))))
 
 (defun rpc-file (name)
-  (let ((path (format nil "~a/tests/rpc/~a" (repository-path) name)))
+  (let ((path (format nil "~a/test-resources/json-rpc/~a" (repository-path) name)))
     (unless (probe-file path)
-      (error "RPC example input ~a not found at ~a" name path))
+      (error "JSON-RPC example message ~a not found at ~a" name path))
     path))
+
+(defun suite-file (name)
+  (let ((path (format nil "~a/test-resources/test-suite/~a" (repository-path) name)))
+    (unless (probe-file path)
+      (error "Test suite ~a not found at ~a" name path))
+    path))
+
+(defun test-suite (name)
+  (coalton-lsp.lib.test.loader:load-test-file (suite-file name)))
 
 (defun pipe (input output &aux (buflen 8192))
   (let ((buf (make-array buflen :element-type 'character)))

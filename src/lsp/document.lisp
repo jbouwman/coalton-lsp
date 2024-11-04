@@ -87,9 +87,10 @@
 ;;; request: textDocument/documentSymbol
 
 (defun handle-text-document-document-symbol (session request)
-  (make-vector-response (get-field request :id)
-                        (document-symbols (get-field (request-params request)
-                                                     (list :text-document :uri)))))
+  (let ((symbols (session-document-symbols session (get-field (request-params request)
+                                                              (list :text-document :uri))))) ; TODO avoid (list here somehow
+    (make-vector-response (get-field request :id) ; TODO combine make-response and make-vector-response
+                          (document-symbols symbols))))
 
 ;;; request: textDocument/foldingRange
 

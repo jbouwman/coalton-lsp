@@ -2,8 +2,10 @@
 
 (defclass session (process)
   ((id :initarg :id
+       :initform 0
        :reader session-id)
-   (server :initarg :server)
+   (server :initarg :server
+           :initform nil)
    (io :initarg :io)
    (worker :initform (make-instance 'worker)
                 :reader worker)
@@ -37,7 +39,7 @@
 
 (defmethod uri ((self session))
   (with-slots (server id) self
-    (format nil "~a/~a" (uri server) id)))
+    (format nil "~a/~a" (and server (uri server)) id)))
 
 (defmethod print-object ((self session) stream)
   (print-unreadable-object (self stream :type t)
@@ -69,48 +71,19 @@
 
 ;; key open documents by uri
 
-(defun open-document (session document)
+(defun open-document (session uri document-text)
   (with-session-context (session)
-    (let ((uri (cdr (assoc "uri" document :test #'string=))))
-      (/info "open ~a" uri)
-      (cond ((gethash uri (session-documents session))
-             (/warn "already open ~a" uri))
-            (t
-             (setf (gethash uri (session-documents session)) document)
-             (submit-event session 'document-opened uri))))))
+    (/info "open ~a" uri)
+    (cond ((gethash uri (session-documents session))
+           (/warn "already open ~a" uri))
+          (t
+           (setf (gethash uri (session-documents session)) document-text)
+           (submit-event session 'document-opened uri)))))
 
 (defun change-document (session document)
   (with-session-context (session)
     (let ((uri (cdr (assoc "uri" document :test #'string=))))
       (submit-event session 'document-changed uri))))
-
-(defun make-diagnostic (s1 e1 s2 e2 message code)
-  (new-message 'diagnostic
-               :message message
-               :code code
-               :severity :warning
-               :source "coalton"
-               :range `(:start (:line ,(1- s1)
-                                :character ,e1)
-                        :end (:line ,(1- s2)
-                              :character ,e2))))
-
-(defun make-diagnostics (c)
-  (mapcar (lambda (e)
-            (let ((coalton-impl/settings:*coalton-print-unicode* nil))
-              (destructuring-bind (note message start end) e
-                (message-value
-                 (make-diagnostic (car start) (cdr start)
-                                  (car end) (cdr end)
-                                  (format nil "~a - ~a" note message)
-                                  1)))))
-          (export-condition c)))
-
-(defun update-diagnostics (session uri)
-  (notify session "textDocument/publishDiagnostics" 
-          (new-message 'publish-diagnostics-params
-                       :uri uri
-                       :diagnostics (compile-uri uri))))
 
 (defun document-opened (session uri)
   (update-diagnostics session uri))
@@ -295,3 +268,11 @@
       (stop worker)
       (stop io))
     (call-next-method)))
+
+;;; TODO when documents are opened source test is passed to the
+;;; server. We can, if we want, work in-memory. Does the session want
+;;; to mediate all uri access? Probably.
+
+(defun document-source (session uri)
+  (declare (ignore session))
+  (coalton:uri-source uri))

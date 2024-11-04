@@ -9,6 +9,7 @@
    (#:uri #:coalton-lsp.lib.uri))
   (:export #:document-symbols
            #:document-diagnostics
+           #:export-condition
            #:program
            #:line-offsets
            #:uri-source))
