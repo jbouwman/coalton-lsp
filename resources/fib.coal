@@ -4,7 +4,7 @@
   (export
     fib))
 
-(delcare fib (Integer -> Integer))
+(declare fib (Integer -> Integer))
 (define (fib n)
   "Compute the nth Fibonacci number"
   (match n

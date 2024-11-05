@@ -26,7 +26,7 @@
 
 (defun uri-source (uri)
   (make-instance 'uri-source
-                 :uri uri))
+                 :uri (uri:parse uri)))
 
 (defmethod source:source-stream ((self uri-source))
   (uri:input-stream (slot-value self 'uri)))
@@ -43,45 +43,9 @@
     (parser:with-reader-context stream
       (parser:read-program stream source ':file))))
 
-;;; Coverting between character offsets and line/character position
-
 (defun line-offsets (source)
   (with-open-stream (stream (source:source-stream source))
     (source::find-line-offsets stream)))
-
-(defun probe-offset (offsets index value)
-  (let ((lo (nth index offsets))
-        (hi (nth (1+ index) offsets)))
-    (cond ((< value lo) -1)
-          ((not hi)      0)
-          ((< hi value)  1)
-          (t             0))))
-
-(defun find-line (offsets value)
-  (loop :with low := 0
-        :with high := (length offsets)
-        :with index := (floor (/ (+ low high) 2))
-        :do (case (probe-offset offsets index value)
-              ( 0 (return (values index (nth index offsets))))
-              (-1 (setf high index))
-              ( 1 (setf low index)))
-            (setf index (floor (/ (+ low high) 2)))))
-
-(defun offset-position (offsets location)
-  (destructuring-bind (start . end)
-      (source:location-span location)
-    (multiple-value-bind (start-line start-offset)
-        (find-line offsets start)
-      (multiple-value-bind (end-line end-offset)
-          (find-line offsets end)
-        `(:start
-          (:line ,start-line
-           :character ,(- start start-offset))
-          :end
-          (:line ,end-line
-           :character ,(- end end-offset)))))))
-
-
 
 (defgeneric visit-node (visitor node)
   (:method (v d) nil))
@@ -136,7 +100,7 @@
 (defun export-condition (condition)
   "Extract text and position fields from a Coalton source condition."
   (mapcar (lambda (note)
-            (list (source:message condition)
+            (list (source::severity condition)
                   (source:message note)
                   (source::start-offset note)
                   (source::end-offset note)))

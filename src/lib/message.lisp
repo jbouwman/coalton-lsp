@@ -61,6 +61,7 @@ The output value will have string-valued map keys.")
    (optional :initarg :optional
              :initform nil)
    (vector :initarg :vector
+           :reader message-class-vector
            :initform nil)))
 
 (defmethod message-class ((self message-field))
@@ -219,11 +220,12 @@ The output value will have string-valued map keys.")
 
 (defun %get-key (message key)
   (let ((field (%get-field (message-class message) key)))
-    (make-instance 'message
-                   :class (message-class field)
-                   :value (cdr (assoc (json-key field)
-                                      (message-value message)
-                                      :test #'string=)))))
+    (values (make-instance 'message
+                           :class (message-class field)
+                           :value (cdr (assoc (json-key field)
+                                              (message-value message)
+                                              :test #'string=)))
+            (message-class-vector field)))) ; bleah! trace this through the recursive calls
 
 (defun %get-path (message path)
   (reduce #'%get-key (listify path) :initial-value message))
@@ -251,16 +253,24 @@ The output value will have string-valued map keys.")
   (message-value (%get-path message (listify path))))
 
 (defun set-field-2 (message key value)
-  (let ((inner (%get-path message (listify key))))
-    (if (typep (message-class inner) 'message-class)
-        (progn
-          (loop :for (key value) :on value :by #'cddr
-                :do (set-field-2 inner key value))
-          (set-field message key (message-value inner)))
-        (set-field message key value))
-    message))
+  (multiple-value-bind (inner vector-p)
+      (%get-path message (listify key))
+    (let* ((field-p (typep (message-class inner) 'message-class)))
+      (break)
+      (cond ((and field-p vector-p)
+             (break))
+             (loop :for (key value) :on value :by #'cddr
+                   :do (set-field-2 inner key value))
+             (set-field message key (message-value inner)))
+            (field-p
+             (loop :for (key value) :on value :by #'cddr
+                   :do (set-field-2 inner key value))
+             (set-field message key (message-value inner)))
+            (t
+             (set-field message key value)))
+      message)))
 
-(defun set-field (message path value)
+(defun set-field (message path value)   ; FIXME clarify which values are allowable here
   (setf (slot-value message 'value)
         (slot-value (%set-path message (listify path) value) 'value))
   message)

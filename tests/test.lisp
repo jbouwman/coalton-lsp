@@ -10,6 +10,7 @@
    #:coalton-lsp.lib.json-rpc)
   (:export #:is-string=
            #:rpc-example
+           #:test-case
            #:test-suite))
 
 (in-package #:coalton-lsp.lib.test)
@@ -48,6 +49,15 @@
 
 (defun test-suite (name)
   (coalton-lsp.lib.test.loader:load-test-file (suite-file name)))
+
+(defun select-case (suite n)
+  (some (lambda (c)
+          (when (= (second c) n)
+            c))
+        suite))
+
+(defun test-case (name n)
+  (select-case (test-suite name) n))
 
 (defun pipe (input output &aux (buflen 8192))
   (let ((buf (make-array buflen :element-type 'character)))

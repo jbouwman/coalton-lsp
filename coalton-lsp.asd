@@ -22,8 +22,10 @@
                (:file "package")
                (:module "session"
                 :serial t
-                :components ((:file "session")
+                :components ((:file "utility")
+                             (:file "session")
                              (:file "diagnostic")
+                             (:file "document")
                              (:file "document-symbol")))
                (:module "lsp"
                 :serial t
@@ -41,7 +43,7 @@
                #:fiasco)
   :pathname "tests"
   :serial t
-  :components ((:file "laoder")
+  :components ((:file "loader")
                (:file "test")
                (:file "package")
                (:file "mock")
@@ -53,6 +55,6 @@
                (:file "lsp-tests")
                (:file "coalton-tests")
                (:file "protocol-tests")
-               (:module "session"
+              (:module "session"
                 :serial t
                 :components ((:file "session-tests")))))

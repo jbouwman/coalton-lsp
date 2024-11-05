@@ -3,6 +3,7 @@
 (defpackage #:coalton-lsp.lib.uri
   (:use #:cl)
   (:export #:parse
+           #:as-string
            #:uri
            #:uri-path
            #:input-stream))
@@ -13,12 +14,19 @@
   scheme
   path)
 
-(defun parse (string)
-  (cond ((alexandria:starts-with-subseq "file:" string)
-         (make-uri :scheme "file"
-                   :path (subseq string 7)))
-        (t
-         nil)))
+(defun parse (uri)
+  (etypecase uri
+    (uri uri)
+    (string (cond ((alexandria:starts-with-subseq "file:" uri)
+                   (make-uri :scheme "file"
+                             :path (subseq uri 7)))
+                  (t
+                   (error "unsupported uri protocol: ~a" uri)))))) ; FIXME split at ':'
+
+(defun as-string (uri)
+  (format nil "~a://~a"
+          (uri-scheme uri)
+          (uri-path uri)))
 
 (defvar *stream-providers*
   (make-hash-table :test #'equalp))
